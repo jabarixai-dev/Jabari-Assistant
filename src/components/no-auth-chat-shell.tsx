@@ -188,7 +188,7 @@ function ChatPanel({
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
+    <section className="relative flex min-w-0 flex-1 flex-col">
       {/* Status bar */}
       <div
         data-testid="chat-status"
@@ -196,7 +196,7 @@ function ChatPanel({
           error ? "error" : isBusy ? "loading" : "ready"
         }
         aria-busy={isBusy}
-        className="border-b border-border px-4 py-3 text-xs text-zinc-500 sm:px-6"
+        className="shrink-0 border-b border-border px-4 py-3 text-xs text-zinc-500 sm:px-6"
       >
         {error
           ? error.message
@@ -232,30 +232,32 @@ function ChatPanel({
         ))}
       </div>
 
-      {/* Floating responsive composer */}
+      {/* Fixed composer — stays at the bottom of the viewport */}
       <form
         data-testid="chat-composer"
         onSubmit={(event) => void send(event)}
-        className="sticky bottom-0 z-10 mx-auto flex w-[calc(100%-1.5rem)] max-w-4xl items-end gap-2 rounded-2xl border border-border bg-background/95 px-3 py-3 shadow-2xl backdrop-blur sm:w-[calc(100%-3rem)] sm:px-4 sm:py-3.5"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 px-3 py-3 shadow-2xl backdrop-blur md:left-60 md:px-6"
       >
-        <textarea
-          data-testid="chat-input"
-          value={draft}
-          disabled={isBusy}
-          rows={1}
-          placeholder="Tell Jabari what you need…"
-          onChange={(event) => setDraft(event.target.value)}
-          className="min-h-12 max-h-40 flex-1 resize-none rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500 disabled:opacity-50"
-        />
+        <div className="mx-auto flex w-full max-w-4xl items-end gap-2">
+          <textarea
+            data-testid="chat-input"
+            value={draft}
+            disabled={isBusy}
+            rows={1}
+            placeholder="Tell Jabari what you need…"
+            onChange={(event) => setDraft(event.target.value)}
+            className="min-h-12 max-h-40 flex-1 resize-none rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500 disabled:opacity-50"
+          />
 
-        <button
-          type="submit"
-          data-testid="chat-send"
-          disabled={isBusy || !draft.trim()}
-          className="shrink-0 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-gold disabled:opacity-40 sm:px-5"
-        >
-          Send
-        </button>
+          <button
+            type="submit"
+            data-testid="chat-send"
+            disabled={isBusy || !draft.trim()}
+            className="shrink-0 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-gold disabled:opacity-40 sm:px-5"
+          >
+            Send
+          </button>
+        </div>
       </form>
     </section>
   )
@@ -325,4 +327,4 @@ function MessagePart({
       )}
     </div>
   )
-           }
+    }
