@@ -20,17 +20,10 @@ export function useAnonymousThreads() {
   const storedCapability = useAnonymousChatCapability()
   const savedThreadId = useLastActiveThreadId()
 
-  const [capability, setCapability] = useState<string | null>(
-    storedCapability,
-  )
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    null,
-  )
+  const [capability, setCapability] = useState<string | null>(storedCapability)
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
-  /*
-   * Keep the in-memory capability synchronized with localStorage.
-   */
   useEffect(() => {
     setCapability(storedCapability)
   }, [storedCapability])
@@ -45,27 +38,29 @@ export function useAnonymousThreads() {
 
   const threads = rows ?? []
 
+  const hasThread = (id: string | null) =>
+    Boolean(id && threads.some((thread) => thread._id === id))
+
   /*
    * Only use a thread that actually exists in the current
    * Convex session. This prevents stale localStorage IDs
-   * from being used.
+   * from being submitted to agentChat.submitMessage().
    */
-  const hasThread = (value: string | null): value is string =>
-    Boolean(value && threads.some((thread) => thread._id === value))
-
-  const activeThreadId = hasThread(selectedThreadId)
-    ? selectedThreadId
-    : hasThread(savedThreadId)
-      ? savedThreadId
-      : (threads[0]?._id ?? null)
+  const activeThreadId =
+    hasThread(selectedThreadId)
+      ? selectedThreadId
+      : hasThread(savedThreadId)
+        ? savedThreadId
+        : threads[0]?._id ?? null
 
   /*
-   * If the saved thread no longer exists, clear it immediately.
+   * If the saved thread no longer exists, remove it from
+   * localStorage so it cannot be reused later.
    */
   useEffect(() => {
     if (
       rows !== undefined &&
-      savedThreadId &&
+      savedThreadId !== null &&
       !threads.some((thread) => thread._id === savedThreadId)
     ) {
       saveLastActiveThreadId(null)
@@ -73,9 +68,6 @@ export function useAnonymousThreads() {
     }
   }, [rows, savedThreadId, threads])
 
-  /*
-   * Select an existing valid conversation.
-   */
   const selectThread = (threadId: string) => {
     if (!threads.some((thread) => thread._id === threadId)) {
       return
@@ -85,9 +77,6 @@ export function useAnonymousThreads() {
     saveLastActiveThreadId(threadId)
   }
 
-  /*
-   * Create a completely valid session + conversation.
-   */
   const createThread = async () => {
     if (isCreating) return null
 
@@ -97,8 +86,8 @@ export function useAnonymousThreads() {
       let nextCapability = capability
 
       /*
-       * No valid capability yet:
-       * create a fresh anonymous session.
+       * Create a completely new anonymous session when there
+       * is no valid capability.
        */
       if (!nextCapability) {
         nextCapability = await createSession({})
@@ -107,9 +96,6 @@ export function useAnonymousThreads() {
         setCapability(nextCapability)
       }
 
-      /*
-       * Create the conversation under that exact capability.
-       */
       const threadId = await createNewThread({
         capability: nextCapability,
       })
@@ -120,17 +106,15 @@ export function useAnonymousThreads() {
       return threadId
     } catch (error) {
       /*
-       * If the stored anonymous session has become invalid,
-       * clear both pieces of local state so the next attempt
-       * starts completely fresh.
+       * If the stored capability is invalid/expired, clear it.
+       * The next attempt will create a fresh anonymous session.
        */
       const message =
         error instanceof Error ? error.message : String(error)
 
       if (
-        message.includes("Chat session not found") ||
-        message.includes("Session not found") ||
-        message.includes("Conversation not found")
+        message.toLowerCase().includes("chat session not found") ||
+        message.toLowerCase().includes("session")
       ) {
         saveAnonymousChatCapability(null)
         saveLastActiveThreadId(null)
@@ -152,4 +136,4 @@ export function useAnonymousThreads() {
     selectThread,
     threads,
   }
-    }
+}
