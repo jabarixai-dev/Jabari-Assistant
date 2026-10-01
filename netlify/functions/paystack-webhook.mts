@@ -1,6 +1,6 @@
 import type { Config } from "@netlify/functions";
 import { neon } from "@neondatabase/serverless";
-import { fireTrigger, processDue } from "./workflow-engine";
+import { fireTrigger, processDue } from "./workflow-engine.mts";
 
 export const config: Config = { path: "/paystack/webhook" };
 

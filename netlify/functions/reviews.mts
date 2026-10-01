@@ -1,7 +1,7 @@
 import type { Config } from "@netlify/functions";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { neon } from "@neondatabase/serverless";
-import { fireTrigger, processDue } from "./workflow-engine";
+import { fireTrigger, processDue } from "./workflow-engine.mts";
 
 const AUTH_URL = "https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth";
 const JWKS_URL = "https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json";
