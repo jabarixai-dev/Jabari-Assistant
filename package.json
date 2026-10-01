@@ -42,7 +42,7 @@
     "lucide-react": "^0.577.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
-    "react": "^19.2.0",
+    "react": "^19.2.4",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.72.0",
@@ -62,7 +62,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/devtools-vite": "^0.6.0",
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.19.15",
     "@types/react": "^19.2.14",
@@ -77,12 +77,5 @@
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.2"
   },
-  "packageManager": "pnpm@12.8.1+sha512.f64ba907507f5ceafe06c8d38e6052d0179444580ec1279ddd5bfc11cb48aa8a2644b66598e07e761da84872a9fc57d5f902b87fa49d024198d558612aabbe45",
-  "pnpm": {
-    "allowBuilds": {
-      "@parcel/watcher": true,
-      "core-js": true,
-      "esbuild": true
-    }
-  }
+  "packageManager": "pnpm@12.8.1+sha512.f64ba907507f5ceafe06c8d38e6052d0179444580ec1279ddd5bfc11cb48aa8a2644b66598e07e761da84872a9fc57d5f902b87fa49d024198d558612aabbe45"
 }
