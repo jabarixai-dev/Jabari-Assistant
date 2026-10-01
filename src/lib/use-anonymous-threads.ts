@@ -19,10 +19,18 @@ type Thread = {
 export function useAnonymousThreads() {
   const storedCapability = useAnonymousChatCapability()
   const savedThreadId = useLastActiveThreadId()
-  const [capability, setCapability] = useState<string | null>(storedCapability)
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+
+  const [capability, setCapability] = useState<string | null>(
+    storedCapability,
+  )
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
+    null,
+  )
   const [isCreating, setIsCreating] = useState(false)
 
+  /*
+   * Keep the in-memory capability synchronized with localStorage.
+   */
   useEffect(() => {
     setCapability(storedCapability)
   }, [storedCapability])
@@ -37,6 +45,11 @@ export function useAnonymousThreads() {
 
   const threads = rows ?? []
 
+  /*
+   * Only use a thread that actually exists in the current
+   * Convex session. This prevents stale localStorage IDs
+   * from being used.
+   */
   const hasThread = (value: string | null): value is string =>
     Boolean(value && threads.some((thread) => thread._id === value))
 
@@ -46,25 +59,86 @@ export function useAnonymousThreads() {
       ? savedThreadId
       : (threads[0]?._id ?? null)
 
+  /*
+   * If the saved thread no longer exists, clear it immediately.
+   */
+  useEffect(() => {
+    if (
+      rows !== undefined &&
+      savedThreadId &&
+      !threads.some((thread) => thread._id === savedThreadId)
+    ) {
+      saveLastActiveThreadId(null)
+      setSelectedThreadId(null)
+    }
+  }, [rows, savedThreadId, threads])
+
+  /*
+   * Select an existing valid conversation.
+   */
   const selectThread = (threadId: string) => {
+    if (!threads.some((thread) => thread._id === threadId)) {
+      return
+    }
+
     setSelectedThreadId(threadId)
     saveLastActiveThreadId(threadId)
   }
 
+  /*
+   * Create a completely valid session + conversation.
+   */
   const createThread = async () => {
     if (isCreating) return null
+
     setIsCreating(true)
+
     try {
       let nextCapability = capability
+
+      /*
+       * No valid capability yet:
+       * create a fresh anonymous session.
+       */
       if (!nextCapability) {
         nextCapability = await createSession({})
+
         saveAnonymousChatCapability(nextCapability)
         setCapability(nextCapability)
       }
 
-      const threadId = await createNewThread({ capability: nextCapability })
-      selectThread(threadId)
+      /*
+       * Create the conversation under that exact capability.
+       */
+      const threadId = await createNewThread({
+        capability: nextCapability,
+      })
+
+      setSelectedThreadId(threadId)
+      saveLastActiveThreadId(threadId)
+
       return threadId
+    } catch (error) {
+      /*
+       * If the stored anonymous session has become invalid,
+       * clear both pieces of local state so the next attempt
+       * starts completely fresh.
+       */
+      const message =
+        error instanceof Error ? error.message : String(error)
+
+      if (
+        message.includes("Chat session not found") ||
+        message.includes("Session not found") ||
+        message.includes("Conversation not found")
+      ) {
+        saveAnonymousChatCapability(null)
+        saveLastActiveThreadId(null)
+        setCapability(null)
+        setSelectedThreadId(null)
+      }
+
+      throw error
     } finally {
       setIsCreating(false)
     }
@@ -78,4 +152,4 @@ export function useAnonymousThreads() {
     selectThread,
     threads,
   }
-}
+    }
