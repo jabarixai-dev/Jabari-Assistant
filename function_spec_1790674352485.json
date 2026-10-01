@@ -1,0 +1,5443 @@
+{
+  "url": "https://agreeable-civet-219.eu-west-1.convex.cloud",
+  "functions": [
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "expiresAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "remainingMessages": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:createAnonymousSessionRecord",
+      "returns": {
+        "tableName": "anonymousSessions",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:createNewThread",
+      "returns": {
+        "tableName": "chatThreads",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "agentChat.js:listThreads",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "threadId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "agentChat.js:listMessages",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "message": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "threadId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:submitMessage",
+      "returns": {
+        "tableName": "chatRuns",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "threadId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "agentChat.js:getActiveRun",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "capability": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "cursor": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "agentChat.js:streamRun",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "attemptId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:claimRun",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "attemptId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "chunks": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          },
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:appendChunks",
+      "returns": {
+        "type": "number"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "attemptId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "message": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          },
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:completeRun",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "attemptId": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "error": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentChat.js:failRun",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "agentChat.js:inspectRun",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "anonymousSession.js:create",
+      "returns": {
+        "type": "string"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "runId": {
+            "fieldType": {
+              "tableName": "chatRuns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "chatGeneration.js:generateReply",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "budget": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "company": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "request": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "threadId": {
+            "fieldType": {
+              "tableName": "chatThreads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "timeline": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "leads.js:capture",
+      "returns": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "leads.js:listRecent",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "leads.js:listRecentForOwner",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "new"
+                },
+                {
+                  "type": "literal",
+                  "value": "contacted"
+                },
+                {
+                  "type": "literal",
+                  "value": "qualified"
+                },
+                {
+                  "type": "literal",
+                  "value": "won"
+                },
+                {
+                  "type": "literal",
+                  "value": "lost"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "leads.js:updateStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "leads.js:getLeadForOwner",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "auth.js:isAuthenticated",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "calledBy": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "params": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": true
+          },
+          "provider": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "refreshToken": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "verifier": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "auth.js:signIn",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Action",
+      "identifier": "auth.js:signOut",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "args": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "object",
+                  "value": {
+                    "generateTokens": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "sessionId": {
+                      "fieldType": {
+                        "tableName": "authSessions",
+                        "type": "id"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "signIn"
+                      },
+                      "optional": false
+                    },
+                    "userId": {
+                      "fieldType": {
+                        "tableName": "users",
+                        "type": "id"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "signOut"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "refreshToken": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "refreshSession"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "allowExtraProviders": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "generateTokens": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "params": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifyCodeAndSignIn"
+                      },
+                      "optional": false
+                    },
+                    "verifier": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifier"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "signature": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "verifierSignature"
+                      },
+                      "optional": false
+                    },
+                    "verifier": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "profile": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "providerAccountId": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "signature": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "userOAuth"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "accountId": {
+                      "fieldType": {
+                        "tableName": "authAccounts",
+                        "type": "id"
+                      },
+                      "optional": true
+                    },
+                    "allowExtraProviders": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": false
+                    },
+                    "code": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "email": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "expirationTime": {
+                      "fieldType": {
+                        "type": "number"
+                      },
+                      "optional": false
+                    },
+                    "phone": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": true
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "createVerificationCode"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "profile": {
+                      "fieldType": {
+                        "type": "any"
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "shouldLinkViaEmail": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": true
+                    },
+                    "shouldLinkViaPhone": {
+                      "fieldType": {
+                        "type": "boolean"
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "createAccountFromCredentials"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": true
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "retrieveAccountWithCredentials"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "account": {
+                      "fieldType": {
+                        "type": "object",
+                        "value": {
+                          "id": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          },
+                          "secret": {
+                            "fieldType": {
+                              "type": "string"
+                            },
+                            "optional": false
+                          }
+                        }
+                      },
+                      "optional": false
+                    },
+                    "provider": {
+                      "fieldType": {
+                        "type": "string"
+                      },
+                      "optional": false
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "modifyAccount"
+                      },
+                      "optional": false
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "value": {
+                    "except": {
+                      "fieldType": {
+                        "type": "array",
+                        "value": {
+                          "tableName": "authSessions",
+                          "type": "id"
+                        }
+                      },
+                      "optional": true
+                    },
+                    "type": {
+                      "fieldType": {
+                        "type": "literal",
+                        "value": "invalidateSessions"
+                      },
+                      "optional": false
+                    },
+                    "userId": {
+                      "fieldType": {
+                        "tableName": "users",
+                        "type": "id"
+                      },
+                      "optional": false
+                    }
+                  }
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "auth.js:store",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "GET",
+      "path": "/.well-known/jwks.json"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "GET",
+      "path": "/.well-known/openid-configuration"
+    },
+    {
+      "functionType": "HttpAction",
+      "method": "POST",
+      "path": "/paystack/webhook"
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:createDraft",
+      "returns": {
+        "tableName": "outreachDrafts",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:listForLead",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bodyText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:updateDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:approveDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "outreach.js:sendApprovedDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:createProspectDraft",
+      "returns": {
+        "tableName": "prospectOutreachDrafts",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:listRecentProspectDrafts",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bodyText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:updateProspectDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:approveProspectDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "outreach.js:sendScheduledProspectDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "outreach.js:sendApprovedProspectDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "outreach.js:checkProspectDelivery",
+      "returns": {
+        "type": "object",
+        "value": {
+          "error": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "outreach.js:generateDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:getOwnerUser",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:getSendContext",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:markSent",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:getDraftContext",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bodyText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "draftId": {
+            "fieldType": {
+              "tableName": "outreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "subject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:saveGeneratedDraft",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:getProspectSendContext",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:markProspectSent",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "error": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:markProspectSendFailed",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "error": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:markProspectUndeliverable",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "draftId": {
+            "fieldType": {
+              "tableName": "prospectOutreachDrafts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "outreach.js:markProspectDeliveryChecked",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "outreach.js:recentEvents",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "outreachMetrics.js:listRecentProspectDrafts",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "outreachMetrics.js:outreachMetrics",
+      "returns": {
+        "type": "object",
+        "value": {
+          "analyzed": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "approved": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "drafts": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "inboundLeads": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "prospects": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "sent": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "userId": {
+            "fieldType": {
+              "tableName": "users",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "research.js:getUser",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "keywords": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "niche": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "platform": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "research.js:search",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "avoid": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "condition": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "customQuery": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "emailDomains": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "niche": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "searchDepth": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "service": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "siteDomain": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "research.js:leadMachine",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "rows": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "name": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "query": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "snippet": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "source": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "url": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:saveResults",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "rows": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:saveQualifiedResults",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "research.js:listRecent",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "research"
+                },
+                {
+                  "type": "literal",
+                  "value": "saved"
+                },
+                {
+                  "type": "literal",
+                  "value": "discarded"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:updateStatus",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "research.js:analyze",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "research.js:getProspect",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "pending"
+                },
+                {
+                  "type": "literal",
+                  "value": "ready"
+                },
+                {
+                  "type": "literal",
+                  "value": "failed"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:markAnalysis",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "hasEmail": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:recordAnalyzed",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactEmail": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactPhone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "fitReason": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "outreachBody": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "outreachSubject": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "painPoint": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "literal",
+              "value": "ready"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:saveAnalysis",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "research.js:enrichContact",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "checkedAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "not_checked"
+                },
+                {
+                  "type": "literal",
+                  "value": "verified"
+                },
+                {
+                  "type": "literal",
+                  "value": "no_contact"
+                },
+                {
+                  "type": "literal",
+                  "value": "needs_review"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:setContactStatus",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "checkedAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "contactEmail": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactEvidence": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactPhone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "contactSource": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "not_checked"
+                },
+                {
+                  "type": "literal",
+                  "value": "verified"
+                },
+                {
+                  "type": "literal",
+                  "value": "no_contact"
+                },
+                {
+                  "type": "literal",
+                  "value": "needs_review"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:saveContact",
+      "returns": null,
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:convertToContact",
+      "returns": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "created": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:clearResearchHistory",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "prospectId": {
+            "fieldType": {
+              "tableName": "prospects",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:deleteProspect",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "research.js:clearProspectsHistory",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "search": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "contacts.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "contacts.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "company": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "jobTitle": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "phone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "tags": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "string"
+              }
+            },
+            "optional": true
+          },
+          "website": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "contacts.js:update",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contacts": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "company": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "email": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "jobTitle": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": true
+                  },
+                  "name": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "notes": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": true
+                  },
+                  "phone": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": true
+                  },
+                  "tags": {
+                    "fieldType": {
+                      "type": "array",
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "optional": true
+                  },
+                  "website": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": true
+                  }
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "contacts.js:importContacts",
+      "returns": {
+        "type": "object",
+        "value": {
+          "created": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "skipped": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "updated": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "detail": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "contacts.js:addNote",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "contacts.js:listActivities",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "action": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "create_task"
+                },
+                {
+                  "type": "literal",
+                  "value": "add_note"
+                },
+                {
+                  "type": "literal",
+                  "value": "create_email_draft"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "actionValue": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "condition": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "any"
+                },
+                {
+                  "type": "literal",
+                  "value": "new"
+                },
+                {
+                  "type": "literal",
+                  "value": "qualified"
+                },
+                {
+                  "type": "literal",
+                  "value": "won"
+                },
+                {
+                  "type": "literal",
+                  "value": "lost"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "steps": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "delayMinutes": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": true
+                  },
+                  "type": {
+                    "fieldType": {
+                      "type": "union",
+                      "value": [
+                        {
+                          "type": "literal",
+                          "value": "create_task"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "add_note"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "create_email_draft"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "update_stage"
+                        }
+                      ]
+                    },
+                    "optional": false
+                  },
+                  "value": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": true
+          },
+          "trigger": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "lead_created"
+                },
+                {
+                  "type": "literal",
+                  "value": "stage_changed"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "workflows.js:create",
+      "returns": {
+        "tableName": "workflows",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "workflows.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "event": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "lead_created"
+                },
+                {
+                  "type": "literal",
+                  "value": "stage_changed"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "workflows.js:executeForLead",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enabled": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "workflowId": {
+            "fieldType": {
+              "tableName": "workflows",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "workflows.js:toggle",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "conversationFeed.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "agentSettings.js:get",
+      "returns": {
+        "type": "object",
+        "value": {
+          "boundaries": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "identity": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "qualification": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "services": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "tone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "boundaries": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "identity": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "qualification": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "services": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "tone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "agentSettings.js:save",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "agentSettings.js:internalGet",
+      "returns": {
+        "type": "object",
+        "value": {
+          "boundaries": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "identity": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "qualification": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "services": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "tone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "workflowTasks.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "taskId": {
+            "fieldType": {
+              "tableName": "workflowTasks",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "workflowTasks.js:complete",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "analytics.js:dashboard",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "endAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "startAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "analytics.js:revenueReport",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "from": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "to": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "appointments.js:list",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "endAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "meetingUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "startAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "appointments.js:create",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "appointmentId": {
+            "fieldType": {
+              "tableName": "appointments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "scheduled"
+                },
+                {
+                  "type": "literal",
+                  "value": "confirmed"
+                },
+                {
+                  "type": "literal",
+                  "value": "completed"
+                },
+                {
+                  "type": "literal",
+                  "value": "cancelled"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "appointments.js:updateStatus",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "search": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "companies.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Mutation",
+      "identifier": "companies.js:syncFromContacts",
+      "returns": {
+        "type": "object",
+        "value": {
+          "companies": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "linked": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "companyId": {
+            "fieldType": {
+              "tableName": "companies",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "industry": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "website": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "companies.js:update",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "q": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "crmSearch.js:global",
+      "returns": {
+        "type": "object",
+        "value": {
+          "companies": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          },
+          "contacts": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          },
+          "leads": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          },
+          "prospects": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "any"
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "opportunities.js:listForOwner",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "expectedCloseAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "probability": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "value": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "opportunities.js:createFromLead",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "expectedCloseAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "opportunityId": {
+            "fieldType": {
+              "tableName": "opportunities",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "probability": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "stage": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "new"
+                },
+                {
+                  "type": "literal",
+                  "value": "contacted"
+                },
+                {
+                  "type": "literal",
+                  "value": "qualified"
+                },
+                {
+                  "type": "literal",
+                  "value": "proposal"
+                },
+                {
+                  "type": "literal",
+                  "value": "negotiation"
+                },
+                {
+                  "type": "literal",
+                  "value": "won"
+                },
+                {
+                  "type": "literal",
+                  "value": "lost"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "value": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "opportunities.js:update",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "opportunities.js:createFromLeadWithDefaults",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "opportunities.js:getForLead",
+      "returns": null,
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "campaigns.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "campaigns.js:leadsForEnrollment",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "steps": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "body": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "delayMinutes": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  },
+                  "subject": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": true
+                  },
+                  "type": {
+                    "fieldType": {
+                      "type": "union",
+                      "value": [
+                        {
+                          "type": "literal",
+                          "value": "email"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "create_task"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "add_note"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "update_stage"
+                        }
+                      ]
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:create",
+      "returns": {
+        "tableName": "campaigns",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "draft"
+                },
+                {
+                  "type": "literal",
+                  "value": "active"
+                },
+                {
+                  "type": "literal",
+                  "value": "paused"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:setStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:enroll",
+      "returns": {
+        "tableName": "campaignEnrollments",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:stopEnrollment",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "campaigns.js:getExecutionContext",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "campaigns.js:recentEvents",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "campaigns.js:executeStep",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "title": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:createTask",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "body": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:addNote",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "stage": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:updateStage",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "stepIndex": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "type": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:advance",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "campaignId": {
+            "fieldType": {
+              "tableName": "campaigns",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "enrollmentId": {
+            "fieldType": {
+              "tableName": "campaignEnrollments",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "error": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "stepIndex": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "campaigns.js:markFailed",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "formId": {
+            "fieldType": {
+              "tableName": "leadForms",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "leadForms.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "leadForms.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "fields": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "key": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "label": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "required": {
+                    "fieldType": {
+                      "type": "boolean"
+                    },
+                    "optional": false
+                  },
+                  "type": {
+                    "fieldType": {
+                      "type": "union",
+                      "value": [
+                        {
+                          "type": "literal",
+                          "value": "text"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "email"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "phone"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "textarea"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "company"
+                        }
+                      ]
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "leadForms.js:create",
+      "returns": {
+        "tableName": "leadForms",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "formId": {
+            "fieldType": {
+              "tableName": "leadForms",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "leadForms.js:submissions",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "formId": {
+            "fieldType": {
+              "tableName": "leadForms",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "draft"
+                },
+                {
+                  "type": "literal",
+                  "value": "published"
+                },
+                {
+                  "type": "literal",
+                  "value": "paused"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "leadForms.js:setStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "formId": {
+            "fieldType": {
+              "tableName": "leadForms",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "honeypot": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "values": {
+            "fieldType": {
+              "type": "any"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "leadForms.js:submit",
+      "returns": {
+        "type": "object",
+        "value": {
+          "ok": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          },
+          "submissionId": {
+            "fieldType": {
+              "tableName": "formSubmissions",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingTypeId": {
+            "fieldType": {
+              "tableName": "bookingTypes",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:get",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "from": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "to": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:bookings",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "durationMinutes": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "location": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "meetingUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "timezone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:createType",
+      "returns": {
+        "tableName": "bookingTypes",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingTypeId": {
+            "fieldType": {
+              "tableName": "bookingTypes",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "from": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "to": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "bookings.js:available",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "number"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingTypeId": {
+            "fieldType": {
+              "tableName": "bookingTypes",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "draft"
+                },
+                {
+                  "type": "literal",
+                  "value": "published"
+                },
+                {
+                  "type": "literal",
+                  "value": "paused"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:setStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingTypeId": {
+            "fieldType": {
+              "tableName": "bookingTypes",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "company": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "honeypot": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "phone": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": true
+          },
+          "startAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "bookings.js:book",
+      "returns": {
+        "type": "object",
+        "value": {
+          "bookingId": {
+            "fieldType": {
+              "tableName": "bookings",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "ok": {
+            "fieldType": {
+              "type": "boolean"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "landingPages.js:getBySlug",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "landingPages.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "ctaText": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "headline": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "sections": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "body": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "heading": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "type": {
+                    "fieldType": {
+                      "type": "union",
+                      "value": [
+                        {
+                          "type": "literal",
+                          "value": "hero"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "text"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "features"
+                        },
+                        {
+                          "type": "literal",
+                          "value": "cta"
+                        }
+                      ]
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          },
+          "slug": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "subheadline": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "theme": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "landingPages.js:create",
+      "returns": {
+        "tableName": "landingPages",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "bookingTypeId": {
+            "fieldType": {
+              "tableName": "bookingTypes",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "formId": {
+            "fieldType": {
+              "tableName": "leadForms",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "pageId": {
+            "fieldType": {
+              "tableName": "landingPages",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "landingPages.js:link",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "pageId": {
+            "fieldType": {
+              "tableName": "landingPages",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "draft"
+                },
+                {
+                  "type": "literal",
+                  "value": "published"
+                },
+                {
+                  "type": "literal",
+                  "value": "paused"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "landingPages.js:setStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "reviews.js:list",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "email": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "reviews.js:create",
+      "returns": {
+        "tableName": "reviewRequests",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "requestId": {
+            "fieldType": {
+              "tableName": "reviewRequests",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "reviews.js:markSent",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "reviewRequests",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "reviews.js:getPublic",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "feedback": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "id": {
+            "fieldType": {
+              "tableName": "reviewRequests",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "rating": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "reviews.js:submit",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "currency": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "description": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "name": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "price": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:createProduct",
+      "returns": {
+        "tableName": "products",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "billing.js:products",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "productId": {
+            "fieldType": {
+              "tableName": "products",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:archiveProduct",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "id": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "billing.js:getPublic",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {}
+      },
+      "functionType": "Query",
+      "identifier": "billing.js:invoices",
+      "returns": {
+        "type": "array",
+        "value": {
+          "type": "any"
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "contactId": {
+            "fieldType": {
+              "tableName": "contacts",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "currency": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "customerEmail": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "customerName": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "dueAt": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          },
+          "items": {
+            "fieldType": {
+              "type": "array",
+              "value": {
+                "type": "object",
+                "value": {
+                  "description": {
+                    "fieldType": {
+                      "type": "string"
+                    },
+                    "optional": false
+                  },
+                  "productId": {
+                    "fieldType": {
+                      "tableName": "products",
+                      "type": "id"
+                    },
+                    "optional": true
+                  },
+                  "quantity": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  },
+                  "unitPrice": {
+                    "fieldType": {
+                      "type": "number"
+                    },
+                    "optional": false
+                  }
+                }
+              }
+            },
+            "optional": false
+          },
+          "leadId": {
+            "fieldType": {
+              "tableName": "leads",
+              "type": "id"
+            },
+            "optional": true
+          },
+          "notes": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "opportunityId": {
+            "fieldType": {
+              "tableName": "opportunities",
+              "type": "id"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:createInvoice",
+      "returns": {
+        "tableName": "invoices",
+        "type": "id"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "draft"
+                },
+                {
+                  "type": "literal",
+                  "value": "sent"
+                },
+                {
+                  "type": "literal",
+                  "value": "paid"
+                },
+                {
+                  "type": "literal",
+                  "value": "void"
+                }
+              ]
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:setStatus",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "billing.js:paymentForInvoice",
+      "returns": {
+        "type": "object",
+        "value": {
+          "authorizationUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "reference": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "billing.js:getInvoiceForEmail",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:markInvoiceSent",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Action",
+      "identifier": "billing.js:sendInvoiceEmail",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "public"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Query",
+      "identifier": "billing.js:getInvoiceForPayment",
+      "returns": {
+        "type": "any"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "accessCode": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "amount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "authorizationUrl": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "currency": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "invoiceId": {
+            "fieldType": {
+              "tableName": "invoices",
+              "type": "id"
+            },
+            "optional": false
+          },
+          "reference": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:recordPaymentInitialization",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    },
+    {
+      "args": {
+        "type": "object",
+        "value": {
+          "amount": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": false
+          },
+          "currency": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "reference": {
+            "fieldType": {
+              "type": "string"
+            },
+            "optional": false
+          },
+          "status": {
+            "fieldType": {
+              "type": "union",
+              "value": [
+                {
+                  "type": "literal",
+                  "value": "success"
+                },
+                {
+                  "type": "literal",
+                  "value": "failed"
+                },
+                {
+                  "type": "literal",
+                  "value": "abandoned"
+                },
+                {
+                  "type": "literal",
+                  "value": "pending"
+                },
+                {
+                  "type": "literal",
+                  "value": "reversed"
+                }
+              ]
+            },
+            "optional": false
+          },
+          "transactionId": {
+            "fieldType": {
+              "type": "number"
+            },
+            "optional": true
+          }
+        }
+      },
+      "functionType": "Mutation",
+      "identifier": "billing.js:reconcilePaystackPayment",
+      "returns": {
+        "type": "null"
+      },
+      "visibility": {
+        "kind": "internal"
+      }
+    }
+  ]
+}
