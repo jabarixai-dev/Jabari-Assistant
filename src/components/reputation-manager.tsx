@@ -1,0 +1,18 @@
+import { useEffect, useState } from "react";
+import { neonApi } from "../lib/neon-api";
+
+type Review = { id:string; name:string; email:string; status:string; rating?:number|null; feedback?:string|null };
+
+export function ReputationManager(){
+ const [rows,setRows]=useState<Review[]>([]),[name,setName]=useState(""),[email,setEmail]=useState("");
+ const load=async()=>{const r=await neonApi<{reviews:Review[]}>("reviews");setRows(r.reviews)};
+ useEffect(()=>{void load()},[]);
+ const add=async()=>{if(!name.trim()||!email.includes("@"))return;await neonApi("reviews",{method:"POST",query:{action:"create"},body:JSON.stringify({name,email})});setName("");setEmail("");await load()};
+ const markSent=async(id:string)=>{await neonApi("reviews",{method:"POST",query:{action:"mark-sent"},body:JSON.stringify({id})});await load()};
+ const sent=rows.filter(r=>r.status==="sent"||r.status==="completed").length,completed=rows.filter(r=>r.status==="completed");
+ const avg=completed.length?completed.reduce((s,r)=>s+(r.rating||0),0)/completed.length:0;
+ return <section id="reputation" className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-white/[.03]"><div className="border-b border-white/10 p-5"><p className="text-xs uppercase tracking-[.18em] text-[#d4af37]">Reputation</p><h2 className="mt-1 text-xl font-bold">Review requests & feedback</h2><p className="mt-1 text-xs text-white/40">Track customer feedback and keep every request attached to the CRM timeline.</p></div>
+ <div className="grid gap-3 border-b border-white/10 p-5 md:grid-cols-[1fr_1fr_auto]"><input value={name} onChange={e=>setName(e.target.value)} placeholder="Customer name" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs"/><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Customer email" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-xs"/><button onClick={()=>void add()} className="rounded-lg bg-[#d4af37] px-4 py-2 text-xs font-bold text-black">Create request</button></div>
+ <div className="grid grid-cols-3 gap-3 p-5"><div className="rounded-xl border border-white/10 p-4"><p className="text-[10px] text-white/35">REQUESTS</p><p className="mt-1 text-xl font-bold">{rows.length}</p></div><div className="rounded-xl border border-white/10 p-4"><p className="text-[10px] text-white/35">SENT</p><p className="mt-1 text-xl font-bold">{sent}</p></div><div className="rounded-xl border border-white/10 p-4"><p className="text-[10px] text-white/35">AVG RATING</p><p className="mt-1 text-xl font-bold">{avg?avg.toFixed(1):"—"}</p></div></div>
+ <div className="space-y-2 px-5 pb-5">{rows.length===0?<p className="text-sm text-white/30">No review requests yet.</p>:rows.map(r=><div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 p-4"><div><p className="text-sm font-semibold">{r.name}</p><p className="text-xs text-white/35">{r.email} · {r.status}</p>{r.rating&&<p className="mt-1 text-xs text-[#d4af37]">{"★".repeat(r.rating)} <span className="text-white/30">{r.feedback||""}</span></p>}</div>{r.status==="pending"&&<button onClick={()=>void markSent(r.id)} className="rounded-lg border border-[#d4af37]/30 px-3 py-2 text-xs text-[#d4af37]">Mark request sent</button>}{r.status==="sent"&&<a href={"/review/"+r.id} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/55">Open review page</a>}</div>)}</div></section>
+}

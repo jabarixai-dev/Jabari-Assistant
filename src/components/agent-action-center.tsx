@@ -1,0 +1,14 @@
+import { useState } from "react"
+import { useConvexAuth, useMutation, useQuery } from "convex/react"
+import { api } from "../../convex/_generated/api"
+import type { Id } from "../../convex/_generated/dataModel"
+
+const labels:any={create_task:"Create task",add_note:"Add note",update_stage:"Update stage",create_email_draft:"Create email draft"}
+export function AgentActionCenter(){
+ const {isAuthenticated,isLoading}=useConvexAuth()
+ const actions=useQuery(api.agentActions.list,isAuthenticated?{}:"skip")||[]
+ const setStatus=useMutation(api.agentActions.setStatus),execute=useMutation(api.agentActions.execute)
+ const [error,setError]=useState("")
+ const change=async(id:Id<"agentActions">,action:"approve"|"reject"|"execute")=>{try{if(action==="execute")await execute({actionId:id});else await setStatus({actionId:id,status:action==="approve"?"approved":"rejected"})}catch(e){setError(e instanceof Error?e.message:"Action failed.")}}
+ return <section className="mt-8 scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.03] p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.18em] text-[#d4af37]">Agent execution</p><h2 className="mt-1 text-lg font-semibold">Action Center</h2><p className="mt-1 text-sm text-white/45">AI-proposed CRM actions stay pending until approved.</p></div></div>{error&&<p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{error}</p>}{!actions.length?<p className="mt-5 text-sm text-white/40">No agent actions yet.</p>:<div className="mt-5 space-y-3">{actions.map((item:any)=><article key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-medium">{labels[item.action_type]||item.action_type}</p><p className="mt-1 text-xs text-white/40">{item.lead_name||"Lead"} · {item.status}</p></div><span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-wider text-white/50">{item.status}</span></div><pre className="mt-3 overflow-x-auto rounded-lg bg-white/[0.03] p-3 text-xs text-white/55">{JSON.stringify(item.payload,null,2)}</pre><div className="mt-3 flex flex-wrap gap-2">{item.status==="pending"&&<><button onClick={()=>void change(item.id,"approve")} className="rounded-lg bg-[#d4af37] px-3 py-2 text-xs font-semibold text-black">Approve</button><button onClick={()=>void change(item.id,"reject")} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/60">Reject</button></>}{item.status==="approved"&&<button onClick={()=>void change(item.id,"execute")} className="rounded-lg border border-[#d4af37]/40 px-3 py-2 text-xs text-[#d4af37]">Execute approved action</button>}</div></article>)}</div>}</section>
+}
