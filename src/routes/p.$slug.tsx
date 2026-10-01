@@ -1,0 +1,10 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect,useState } from "react";
+export const Route=createFileRoute("/p/$slug")({component:PublicPage});
+function PublicPage(){
+ const {slug}=Route.useParams(),[page,setPage]=useState<any>(undefined);
+ useEffect(()=>{void fetch("/api/landing-pages?action=public&slug="+encodeURIComponent(slug)).then(async r=>{const x=await r.json();setPage(r.ok?x.page:null)}).catch(()=>setPage(null))},[slug]);
+ if(page===undefined)return <main className="grid min-h-screen place-items-center bg-[#080808] text-white/40">Loading page…</main>;
+ if(!page)return <main className="grid min-h-screen place-items-center bg-[#080808] text-white/40">Page not found.</main>;
+ return <main className="min-h-screen bg-[#080808] text-white"><section className="mx-auto max-w-5xl px-6 py-24 text-center"><p className="text-xs uppercase tracking-[.2em] text-[#d4af37]">Jabari Assistant</p><h1 className="mx-auto mt-4 max-w-3xl text-5xl font-bold tracking-tight">{page.headline}</h1><p className="mx-auto mt-5 max-w-2xl text-lg text-white/50">{page.subheadline}</p><div className="mt-8 flex justify-center gap-3">{page.formId&&<a href={"/form/"+page.formId+"?source=landing:"+encodeURIComponent(page.slug)} className="rounded-xl bg-[#d4af37] px-5 py-3 text-sm font-bold text-black">{page.ctaText}</a>}{page.bookingTypeId&&<a href={"/book/"+page.bookingTypeId+"?source=landing:"+encodeURIComponent(page.slug)} className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white/80">Book a time</a>}</div></section><section className="mx-auto max-w-4xl space-y-4 px-6 pb-24">{(page.sections||[]).map((s:any,i:number)=><article key={i} className="rounded-2xl border border-white/10 bg-white/[.03] p-7"><h2 className="text-xl font-semibold">{s.heading}</h2><p className="mt-2 text-sm leading-7 text-white/50">{s.body}</p></article>)}</section></main>
+}
