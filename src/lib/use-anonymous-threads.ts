@@ -20,56 +20,117 @@ export function useAnonymousThreads() {
   const storedCapability = useAnonymousChatCapability()
   const savedThreadId = useLastActiveThreadId()
 
-  const [capability, setCapability] = useState<string | null>(storedCapability)
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const [capability, setCapability] = useState<string | null>(
+    storedCapability,
+  )
+
+  const [selectedThreadId, setSelectedThreadId] =
+    useState<string | null>(null)
+
   const [isCreating, setIsCreating] = useState(false)
 
+  /*
+   * Keep the React capability synchronized with localStorage.
+   */
   useEffect(() => {
     setCapability(storedCapability)
   }, [storedCapability])
 
+  /*
+   * A capability identifies the anonymous session.
+   *
+   * If the capability changes, the previously selected thread
+   * must not be reused because it may belong to another session.
+   */
+  useEffect(() => {
+    setSelectedThreadId(null)
+    saveLastActiveThreadId(null)
+  }, [capability])
+
+  /*
+   * Ask Convex for the threads belonging to the CURRENT
+   * anonymous capability.
+   */
   const rows = useQuery(
     api.agentChat.listThreads,
     capability ? { capability } : "skip",
   ) as Thread[] | undefined
 
   const createSession = useAction(api.anonymousSession.create)
-  const createNewThread = useMutation(api.agentChat.createNewThread)
 
+  const createNewThread = useMutation(
+    api.agentChat.createNewThread,
+  )
+
+  /*
+   * Do not treat an unresolved Convex query as an empty
+   * confirmed list. We need to know that the query has loaded
+   * before selecting a thread.
+   */
   const threads = rows ?? []
 
-  const hasThread = (id: string | null) =>
-    Boolean(id && threads.some((thread) => thread._id === id))
+  const isThreadValid = (id: string | null) => {
+    if (!id || rows === undefined) {
+      return false
+    }
+
+    return threads.some((thread) => thread._id === id)
+  }
 
   /*
-   * Only use a thread that actually exists in the current
-   * Convex session. This prevents stale localStorage IDs
-   * from being submitted to agentChat.submitMessage().
+   * Only expose a thread ID after Convex has confirmed that
+   * the thread belongs to the current anonymous session.
    */
   const activeThreadId =
-    hasThread(selectedThreadId)
-      ? selectedThreadId
-      : hasThread(savedThreadId)
-        ? savedThreadId
-        : threads[0]?._id ?? null
+    rows !== undefined
+      ? isThreadValid(selectedThreadId)
+        ? selectedThreadId
+        : isThreadValid(savedThreadId)
+          ? savedThreadId
+          : threads[0]?._id ?? null
+      : null
 
   /*
-   * If the saved thread no longer exists, remove it from
-   * localStorage so it cannot be reused later.
+   * Clear a stale thread ID from localStorage.
    */
   useEffect(() => {
+    if (rows === undefined) {
+      return
+    }
+
     if (
-      rows !== undefined &&
-      savedThreadId !== null &&
-      !threads.some((thread) => thread._id === savedThreadId)
+      savedThreadId &&
+      !threads.some(
+        (thread) => thread._id === savedThreadId,
+      )
     ) {
       saveLastActiveThreadId(null)
-      setSelectedThreadId(null)
     }
   }, [rows, savedThreadId, threads])
 
+  /*
+   * If the currently selected thread disappears, stop using it.
+   */
+  useEffect(() => {
+    if (rows === undefined) {
+      return
+    }
+
+    if (
+      selectedThreadId &&
+      !threads.some(
+        (thread) => thread._id === selectedThreadId,
+      )
+    ) {
+      setSelectedThreadId(null)
+    }
+  }, [rows, selectedThreadId, threads])
+
   const selectThread = (threadId: string) => {
-    if (!threads.some((thread) => thread._id === threadId)) {
+    /*
+     * Never select a thread that Convex has not confirmed.
+     */
+    if (!isThreadValid(threadId)) {
       return
     }
 
@@ -78,7 +139,9 @@ export function useAnonymousThreads() {
   }
 
   const createThread = async () => {
-    if (isCreating) return null
+    if (isCreating) {
+      return null
+    }
 
     setIsCreating(true)
 
@@ -86,8 +149,7 @@ export function useAnonymousThreads() {
       let nextCapability = capability
 
       /*
-       * Create a completely new anonymous session when there
-       * is no valid capability.
+       * If there is no anonymous session, create one first.
        */
       if (!nextCapability) {
         nextCapability = await createSession({})
@@ -96,28 +158,43 @@ export function useAnonymousThreads() {
         setCapability(nextCapability)
       }
 
+      /*
+       * Create the thread using the SAME capability that will
+       * subsequently be used to send messages.
+       */
       const threadId = await createNewThread({
         capability: nextCapability,
       })
 
+      /*
+       * This thread was just created by this exact session,
+       * so it is safe to select it immediately.
+       */
       setSelectedThreadId(threadId)
       saveLastActiveThreadId(threadId)
 
       return threadId
     } catch (error) {
-      /*
-       * If the stored capability is invalid/expired, clear it.
-       * The next attempt will create a fresh anonymous session.
-       */
       const message =
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error
+          ? error.message
+          : String(error)
 
+      /*
+       * If the session is invalid, completely reset the
+       * anonymous session state.
+       */
       if (
-        message.toLowerCase().includes("chat session not found") ||
-        message.toLowerCase().includes("session")
+        message
+          .toLowerCase()
+          .includes("chat session not found") ||
+        message
+          .toLowerCase()
+          .includes("conversation not found")
       ) {
         saveAnonymousChatCapability(null)
         saveLastActiveThreadId(null)
+
         setCapability(null)
         setSelectedThreadId(null)
       }
@@ -136,4 +213,4 @@ export function useAnonymousThreads() {
     selectThread,
     threads,
   }
-        }
+}
