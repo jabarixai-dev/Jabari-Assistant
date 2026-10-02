@@ -1,229 +1,98 @@
-import type {
-  ChatTransport,
-  UIMessage,
-  UIMessageChunk,
-} from "ai"
-import type { ConvexReactClient } from "convex/react"
+import { useSyncExternalStore } from "react"
 
-import { api } from "../../convex/_generated/api"
-import type { Id } from "../../convex/_generated/dataModel"
+function createLocalStorageStore(key: string) {
+  const listeners = new Set<() => void>()
 
-function serializable<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
-}
-
-export class ConvexChatTransport
-  implements ChatTransport<UIMessage>
-{
-  constructor(
-    private readonly client: ConvexReactClient,
-    private readonly capability: string,
-  ) {}
-
-  async sendMessages(
-    options: Parameters<
-      ChatTransport<UIMessage>["sendMessages"]
-    >[0],
-  ) {
-    if (options.trigger !== "submit-message") {
-      throw new Error(
-        "Regeneration is not implemented for this chat.",
-      )
-    }
-
-    const message = options.messages.at(-1)
-
-    if (!message || message.role !== "user") {
-      throw new Error("A user message is required.")
-    }
-
-    if (!options.chatId) {
-      throw new Error(
-        "No active conversation. Please start a new conversation.",
-      )
-    }
-
-    try {
-      const runId = await this.client.mutation(
-        api.agentChat.submitMessage,
-        {
-          capability: this.capability,
-          threadId: options.chatId,
-          message: serializable(message),
-        },
-      )
-
-      return this.watchRun(runId, options.abortSignal)
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error)
-
-      if (
-        message.toLowerCase().includes("conversation not found")
-      ) {
-        throw new Error(
-          "This conversation no longer exists. Please start a new conversation.",
-        )
-      }
-
-      if (
-        message.toLowerCase().includes("chat session not found")
-      ) {
-        throw new Error(
-          "Your chat session expired. Please start a new conversation.",
-        )
-      }
-
-      throw error
-    }
-  }
-
-  async reconnectToStream(
-    options: Parameters<
-      ChatTransport<UIMessage>["reconnectToStream"]
-    >[0],
-  ) {
-    if (!options.chatId) {
+  const getSnapshot = () => {
+    if (typeof window === "undefined") {
       return null
     }
 
-    const active = await this.client.query(
-      api.agentChat.getActiveRun,
-      {
-        capability: this.capability,
-        threadId: options.chatId,
-      },
-    )
-
-    return active
-      ? this.watchRun(active.runId, undefined)
-      : null
+    return window.localStorage.getItem(key)
   }
 
-  private watchRun(
-    runId: Id<"chatRuns">,
-    abortSignal: AbortSignal | undefined,
-  ) {
-    let unsubscribe: (() => void) | undefined
-    let cursor = 0
-    let closed = false
-    let restartQueued = false
+  const getServerSnapshot = () => null
 
-    const stream = new ReadableStream<UIMessageChunk>({
-      start: (controller) => {
-        const close = () => {
-          if (closed) return
-
-          closed = true
-          unsubscribe?.()
-          controller.close()
-        }
-
-        const fail = (error: unknown) => {
-          if (closed) return
-
-          closed = true
-          unsubscribe?.()
-          controller.error(error)
-        }
-
-        const watchFromCursor = () => {
-          if (closed) return
-
-          unsubscribe?.()
-
-          const pageStart = cursor
-
-          const watch = this.client.watchQuery(
-            api.agentChat.streamRun,
-            {
-              capability: this.capability,
-              runId,
-              cursor,
-            },
-          )
-
-          const update = () => {
-            try {
-              const snapshot = watch.localQueryResult()
-
-              if (!snapshot) return
-
-              for (const batch of snapshot.batches) {
-                if (batch.end <= cursor) continue
-
-                const offset = Math.max(
-                  0,
-                  cursor - batch.start,
-                )
-
-                for (const chunk of batch.chunks.slice(offset)) {
-                  controller.enqueue(
-                    chunk as UIMessageChunk,
-                  )
-                }
-
-                cursor = Math.max(cursor, batch.end)
-              }
-
-              if (
-                snapshot.batches.length === 50 &&
-                cursor > pageStart
-              ) {
-                unsubscribe?.()
-                unsubscribe = undefined
-
-                if (!restartQueued) {
-                  restartQueued = true
-
-                  queueMicrotask(() => {
-                    restartQueued = false
-                    watchFromCursor()
-                  })
-                }
-
-                return
-              }
-
-              if (snapshot.status === "failed") {
-                fail(
-                  new Error(
-                    snapshot.error ??
-                      "Reply generation failed.",
-                  ),
-                )
-              } else if (
-                snapshot.status === "completed"
-              ) {
-                close()
-              }
-            } catch (error) {
-              fail(error)
-            }
-          }
-
-          unsubscribe = watch.onUpdate(update)
-
-          update()
-        }
-
-        watchFromCursor()
-
-        if (abortSignal) {
-          abortSignal.addEventListener(
-            "abort",
-            close,
-            { once: true },
-          )
-        }
-      },
-
-      cancel: () => {
-        closed = true
-        unsubscribe?.()
-      },
-    })
-
-    return stream
+  const emit = () => {
+    for (const listener of listeners) {
+      listener()
+    }
   }
-        }
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === key) {
+      emit()
+    }
+  }
+
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener)
+
+    window.addEventListener("storage", onStorage)
+
+    return () => {
+      listeners.delete(listener)
+
+      if (listeners.size === 0) {
+        window.removeEventListener("storage", onStorage)
+      }
+    }
+  }
+
+  const set = (value: string | null) => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    if (value === null) {
+      window.localStorage.removeItem(key)
+    } else {
+      window.localStorage.setItem(key, value)
+    }
+
+    emit()
+  }
+
+  return {
+    getSnapshot,
+    getServerSnapshot,
+    subscribe,
+    set,
+  }
+}
+
+const capabilityStore = createLocalStorageStore(
+  "anonymous-chat-capability-v1",
+)
+
+const activeThreadStore = createLocalStorageStore(
+  "anonymous-chat-active-thread-v1",
+)
+
+export function useAnonymousChatCapability() {
+  return useSyncExternalStore(
+    capabilityStore.subscribe,
+    capabilityStore.getSnapshot,
+    capabilityStore.getServerSnapshot,
+  )
+}
+
+export function saveAnonymousChatCapability(
+  capability: string | null,
+) {
+  capabilityStore.set(capability)
+}
+
+export function useLastActiveThreadId() {
+  return useSyncExternalStore(
+    activeThreadStore.subscribe,
+    activeThreadStore.getSnapshot,
+    activeThreadStore.getServerSnapshot,
+  )
+}
+
+export function saveLastActiveThreadId(
+  threadId: string | null,
+) {
+  activeThreadStore.set(threadId)
+}
