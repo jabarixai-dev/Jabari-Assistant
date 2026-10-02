@@ -2,25 +2,20 @@
 
 import {
   convertToModelMessages,
-  stepCountIs,
-  streamText,
+  generateText,
   type UIMessage,
-  type UIMessageChunk,
 } from "ai"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { v } from "convex/values"
 
 import { internal } from "./_generated/api"
 import { internalAction } from "./_generated/server"
-import { buildEnabledTools, toolSystemPrompt } from "./agentTools"
 
 function requiredEnv(name: string) {
   const value = process.env[name]
 
   if (!value) {
-    throw new Error(
-      `Missing required Convex environment variable: ${name}`,
-    )
+    throw new Error(`Missing required Convex environment variable: ${name}`)
   }
 
   return value
@@ -28,13 +23,13 @@ function requiredEnv(name: string) {
 
 function publicError(error: unknown) {
   const message =
-    error instanceof Error ? error.message : "Reply generation failed."
+    error instanceof Error ? error.message : String(error)
 
-  console.error("[gemini-agent] Generation error:", error)
+  console.error("[gemini-agent] REAL GENERATION ERROR:", error)
 
   if (
     message.toLowerCase().includes("rate limit") ||
-    message.toLowerCase().includes("429")
+    message.includes("429")
   ) {
     return "Support is busy right now. Please retry shortly."
   }
@@ -42,16 +37,14 @@ function publicError(error: unknown) {
   if (
     message.toLowerCase().includes("api key") ||
     message.toLowerCase().includes("authentication") ||
-    message.toLowerCase().includes("unauthorized")
+    message.toLowerCase().includes("unauthorized") ||
+    message.includes("401") ||
+    message.includes("403")
   ) {
     return "The assistant is temporarily unavailable. Please retry shortly."
   }
 
   return "The assistant could not generate a reply. Please retry."
-}
-
-function serializable<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
 }
 
 export const generateReply = internalAction({
@@ -88,122 +81,56 @@ export const generateReply = internalAction({
         apiKey: requiredEnv("GEMINI_API_KEY"),
       })
 
-      const result = streamText({
-        model: google("gemini-2.5-flash"),
+      const systemPrompt = [
+        "You are the AI representative for Jabari Tech.",
+        "Answer clearly, professionally, and helpfully.",
+        "Use the following Jabari Tech business information as context.",
 
-        system: [
-          "You are the AI representative for Jabari Tech.",
+        "Identity: " + settings.identity,
+        "Services: " + settings.services,
+        "Tone: " + settings.tone,
+        "Qualification rules: " + settings.qualification,
+        "Boundaries: " + settings.boundaries,
 
-          "Use the configured business profile, tone, qualification rules, and boundaries below as the source of truth.",
+        "For now, do not attempt to call external tools or capture leads.",
+        "If a visitor shows genuine interest in hiring Jabari Tech, ask for the information needed to understand their project.",
+      ].join(" ")
 
-          "Identity: " + settings.identity,
-
-          "Services: " + settings.services,
-
-          "Tone: " + settings.tone,
-
-          "Qualification rules: " + settings.qualification,
-
-          "Boundaries: " + settings.boundaries,
-
-          "When enough genuine hiring intent and project information is available, use captureLead exactly once. Do not capture casual or incomplete enquiries.",
-
-          "After successful capture, say the enquiry has been recorded without inventing a response time.",
-
-          toolSystemPrompt(),
-        ].join(" "),
-
-        messages: await convertToModelMessages(originalMessages),
-
-        tools: buildEnabledTools(ctx, claimed.threadId),
-
-        stopWhen: stepCountIs(4),
-      })
-
-      let finalMessage: UIMessage | undefined
-
-      let streamError: unknown
-
-      const stream = result.toUIMessageStream({
+      const messages = await convertToModelMessages(
         originalMessages,
-
-        generateMessageId: () => claimed.assistantMessageId,
-
-        onEnd: ({ responseMessage }) => {
-          finalMessage = responseMessage
-        },
-
-        onError: (error) => {
-          streamError = error
-
-          console.error(
-            "[gemini-agent] Model stream failed",
-            error,
-          )
-
-          return publicError(error)
-        },
-      })
-
-      const pending: UIMessageChunk[] = []
-
-      let lastFlush = Date.now()
-
-      const flush = async () => {
-        if (!pending.length) {
-          return
-        }
-
-        const chunks = pending
-          .splice(0, pending.length)
-          .map(serializable)
-
-        await ctx.runMutation(
-          internal.agentChat.appendChunks,
-          {
-            runId: args.runId,
-            attemptId,
-            chunks,
-          },
-        )
-
-        lastFlush = Date.now()
-      }
-
-      for await (const chunk of stream) {
-        pending.push(chunk)
-
-        if (
-          pending.length >= 24 ||
-          Date.now() - lastFlush >= 120
-        ) {
-          await flush()
-        }
-      }
-
-      await flush()
-
-      if (streamError) {
-        throw streamError
-      }
-
-      if (!finalMessage) {
-        throw new Error(
-          "AI SDK stream ended without a response message.",
-        )
-      }
-
-      const hasVisibleContent = finalMessage.parts.some(
-        (part) =>
-          (part.type === "text" &&
-            part.text.trim().length > 0) ||
-          part.type.startsWith("tool-"),
       )
 
-      if (!hasVisibleContent) {
+      console.log(
+        "[gemini-agent] Sending request to Gemini...",
+      )
+
+      const result = await generateText({
+        model: google("gemini-2.5-flash"),
+        system: systemPrompt,
+        messages,
+      })
+
+      console.log(
+        "[gemini-agent] Gemini response received.",
+      )
+
+      const text = result.text?.trim()
+
+      if (!text) {
         throw new Error(
-          "The model returned an empty reply.",
+          "Gemini returned an empty response.",
         )
+      }
+
+      const assistantMessage: UIMessage = {
+        id: claimed.assistantMessageId,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text,
+          },
+        ],
       }
 
       await ctx.runMutation(
@@ -211,10 +138,19 @@ export const generateReply = internalAction({
         {
           runId: args.runId,
           attemptId,
-          message: serializable(finalMessage),
+          message: assistantMessage,
         },
       )
+
+      console.log(
+        "[gemini-agent] Run completed successfully.",
+      )
     } catch (error) {
+      console.error(
+        "[gemini-agent] REAL GENERATION ERROR:",
+        error,
+      )
+
       await ctx.runMutation(
         internal.agentChat.failRun,
         {
