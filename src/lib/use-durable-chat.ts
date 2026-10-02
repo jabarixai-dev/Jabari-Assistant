@@ -6,6 +6,7 @@ import type { UIMessage } from "ai"
 import { api } from "../../convex/_generated/api"
 import type { Id } from "../../convex/_generated/dataModel"
 import { ConvexChatTransport } from "./convex-chat-transport"
+import { mergeDurableMessages } from "./merge-durable-messages"
 
 export function useDurableChat({
   capability,
@@ -16,13 +17,20 @@ export function useDurableChat({
 }) {
   const client = useConvex()
 
-  const persistedMessages = useQuery(api.agentChat.listMessages, {
-    capability,
-    threadId,
-  }) as UIMessage[] | undefined
+  const persistedMessages = useQuery(
+    api.agentChat.listMessages,
+    {
+      capability,
+      threadId,
+    },
+  ) as UIMessage[] | undefined
 
   const transport = useMemo(
-    () => new ConvexChatTransport(client, capability),
+    () =>
+      new ConvexChatTransport(
+        client,
+        capability,
+      ),
     [client, capability],
   )
 
@@ -33,10 +41,14 @@ export function useDurableChat({
 
   const messages = useMemo(
     () =>
-      chat.messages.length
-        ? chat.messages
-        : (persistedMessages ?? []),
-    [chat.messages, persistedMessages],
+      mergeDurableMessages(
+        persistedMessages ?? [],
+        chat.messages,
+      ),
+    [
+      persistedMessages,
+      chat.messages,
+    ],
   )
 
   const isBusy =
@@ -48,7 +60,9 @@ export function useDurableChat({
     messages,
     error: chat.error ?? null,
     isBusy,
-    historyLoading: persistedMessages === undefined,
-    threadId: threadId as Id<"chatThreads">,
+    historyLoading:
+      persistedMessages === undefined,
+    threadId:
+      threadId as Id<"chatThreads">,
   }
 }
