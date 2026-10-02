@@ -3,6 +3,7 @@
 import {
   convertToModelMessages,
   generateText,
+  stepCountIs,
   type UIMessage,
 } from "ai"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
@@ -10,6 +11,7 @@ import { v } from "convex/values"
 
 import { internal } from "./_generated/api"
 import { internalAction } from "./_generated/server"
+import { buildEnabledTools, toolSystemPrompt } from "./agentTools"
 
 function requiredEnv(name: string) {
   const value = process.env[name]
@@ -45,6 +47,10 @@ function publicError(error: unknown) {
   }
 
   return "The assistant could not generate a reply. Please retry."
+}
+
+function serializable<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
 }
 
 export const generateReply = internalAction({
@@ -84,7 +90,7 @@ export const generateReply = internalAction({
       const systemPrompt = [
         "You are the AI representative for Jabari Tech.",
         "Answer clearly, professionally, and helpfully.",
-        "Use the following Jabari Tech business information as context.",
+        "Use the configured Jabari Tech business profile as the source of truth.",
 
         "Identity: " + settings.identity,
         "Services: " + settings.services,
@@ -92,22 +98,35 @@ export const generateReply = internalAction({
         "Qualification rules: " + settings.qualification,
         "Boundaries: " + settings.boundaries,
 
-        "For now, do not attempt to call external tools or capture leads.",
-        "If a visitor shows genuine interest in hiring Jabari Tech, ask for the information needed to understand their project.",
+        "When a visitor has genuine hiring intent, collect enough information to understand the project.",
+        "Before capturing a lead, make sure you have the visitor's name, email, what they need, company if applicable, budget if provided, and timeline if provided.",
+        "Do not capture casual questions or incomplete enquiries.",
+        "Use captureLead exactly once when the enquiry contains genuine hiring intent and sufficient information.",
+        "After a successful captureLead call, tell the visitor that their enquiry has been recorded.",
+        "Do not invent a response time.",
+        toolSystemPrompt(),
       ].join(" ")
 
       const messages = await convertToModelMessages(
         originalMessages,
       )
 
+      const tools = buildEnabledTools(
+        ctx,
+        claimed.threadId,
+      )
+
       console.log(
-        "[gemini-agent] Sending request to Gemini...",
+        "[gemini-agent] Sending Gemini request with tools:",
+        Object.keys(tools),
       )
 
       const result = await generateText({
         model: google("gemini-3.8-flash"),
         system: systemPrompt,
         messages,
+        tools,
+        stopWhen: stepCountIs(4),
       })
 
       console.log(
@@ -116,7 +135,13 @@ export const generateReply = internalAction({
 
       const text = result.text?.trim()
 
-      if (!text) {
+      const toolResults = result.steps?.some(
+        (step) =>
+          Array.isArray(step.toolResults) &&
+          step.toolResults.length > 0,
+      )
+
+      if (!text && !toolResults) {
         throw new Error(
           "Gemini returned an empty response.",
         )
@@ -128,7 +153,9 @@ export const generateReply = internalAction({
         parts: [
           {
             type: "text",
-            text,
+            text:
+              text ||
+              "Your enquiry has been recorded.",
           },
         ],
       }
@@ -138,7 +165,7 @@ export const generateReply = internalAction({
         {
           runId: args.runId,
           attemptId,
-          message: assistantMessage,
+          message: serializable(assistantMessage),
         },
       )
 
