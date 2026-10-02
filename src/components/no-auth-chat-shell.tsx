@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react"
 import type { UIMessage } from "ai"
 import { useMutation } from "convex/react"
+
 import { api } from "../../convex/_generated/api"
 import type { Id } from "../../convex/_generated/dataModel"
+
 import { useAnonymousThreads } from "../lib/use-anonymous-threads"
 import { useDurableChat } from "../lib/use-durable-chat"
 
@@ -16,10 +18,15 @@ export function NoAuthChatShell() {
     threads,
   } = useAnonymousThreads()
 
-  const removeThread = useMutation(api.agentChat.deleteThread)
+  const removeThread = useMutation(
+    api.agentChat.deleteThread,
+  )
 
-  const [startError, setStartError] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [startError, setStartError] =
+    useState<string | null>(null)
+
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null)
 
   const start = async () => {
     setStartError(null)
@@ -28,13 +35,17 @@ export function NoAuthChatShell() {
       await createThread()
     } catch (error) {
       setStartError(
-        error instanceof Error ? error.message : "Could not start chat",
+        error instanceof Error
+          ? error.message
+          : "Could not start chat",
       )
     }
   }
 
   const remove = async (id: string) => {
-    if (!capability || deletingId) return
+    if (!capability || deletingId) {
+      return
+    }
 
     setDeletingId(id)
 
@@ -55,14 +66,21 @@ export function NoAuthChatShell() {
   }
 
   /*
-   * Initial public chat screen.
+   * No confirmed session/thread yet.
+   *
+   * We deliberately do NOT mount ChatPanel until
+   * useAnonymousThreads() has confirmed a valid thread.
    */
   if (!capability || !activeThreadId) {
     return (
       <main
         data-testid="chat-start-state"
         data-state={
-          startError ? "error" : isCreating ? "loading" : "ready"
+          startError
+            ? "error"
+            : isCreating
+              ? "loading"
+              : "ready"
         }
         className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-5 text-foreground"
       >
@@ -71,8 +89,8 @@ export function NoAuthChatShell() {
         </h1>
 
         <p className="max-w-sm text-center text-sm text-muted-foreground">
-          Talk to Jabari Tech about websites, content, AI workflows, or a
-          project you want to build.
+          Talk to Jabari Tech about websites, content, AI
+          workflows, or a project you want to build.
         </p>
 
         <button
@@ -82,11 +100,16 @@ export function NoAuthChatShell() {
           onClick={() => void start()}
           className="rounded-full bg-zinc-100 px-6 py-2.5 font-medium text-zinc-900 transition hover:bg-gold disabled:opacity-50"
         >
-          {isCreating ? "Starting…" : "Start a private conversation"}
+          {isCreating
+            ? "Starting…"
+            : "Start a private conversation"}
         </button>
 
         {startError && (
-          <p role="alert" className="text-sm text-red-400">
+          <p
+            role="alert"
+            className="max-w-md text-center text-sm text-red-400"
+          >
             {startError}
           </p>
         )}
@@ -113,7 +136,7 @@ export function NoAuthChatShell() {
           + New chat
         </button>
 
-        {(threads ?? []).map((thread) => (
+        {threads.map((thread) => (
           <div
             key={thread._id}
             className="group flex items-center gap-1"
@@ -122,9 +145,12 @@ export function NoAuthChatShell() {
               type="button"
               data-testid="chat-thread-item"
               data-active={
-                thread._id === activeThreadId || undefined
+                thread._id === activeThreadId ||
+                undefined
               }
-              onClick={() => selectThread(thread._id)}
+              onClick={() =>
+                selectThread(thread._id)
+              }
               className={
                 "min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm transition hover:bg-card " +
                 (thread._id === activeThreadId
@@ -137,9 +163,15 @@ export function NoAuthChatShell() {
 
             <button
               type="button"
-              aria-label={"Delete " + thread.title}
-              disabled={deletingId === thread._id}
-              onClick={() => void remove(thread._id)}
+              aria-label={
+                "Delete " + thread.title
+              }
+              disabled={
+                deletingId === thread._id
+              }
+              onClick={() =>
+                void remove(thread._id)
+              }
               className="rounded-md px-2 py-1 text-xs text-red-400 opacity-60 transition hover:bg-red-500/10 hover:opacity-100 disabled:opacity-30"
             >
               Delete
@@ -148,11 +180,27 @@ export function NoAuthChatShell() {
         ))}
       </nav>
 
-      <ChatPanel
-        key={activeThreadId}
-        capability={capability}
-        threadId={activeThreadId as Id<"chatThreads">}
-      />
+      {/*
+       * Extra runtime guard:
+       *
+       * ChatPanel is ONLY mounted when activeThreadId
+       * has been confirmed by useAnonymousThreads().
+       */}
+      {activeThreadId ? (
+        <ChatPanel
+          key={activeThreadId}
+          capability={capability}
+          threadId={
+            activeThreadId as Id<"chatThreads">
+          }
+        />
+      ) : (
+        <section className="flex min-w-0 flex-1 items-center justify-center bg-background">
+          <p className="text-sm text-muted-foreground">
+            Loading conversation…
+          </p>
+        </section>
+      )}
     </main>
   )
 }
@@ -164,7 +212,12 @@ function ChatPanel({
   capability: string
   threadId: Id<"chatThreads">
 }) {
-  const { error, isBusy, messages, sendMessage } = useDurableChat({
+  const {
+    error,
+    isBusy,
+    messages,
+    sendMessage,
+  } = useDurableChat({
     capability,
     threadId,
   })
@@ -176,13 +229,18 @@ function ChatPanel({
 
     const text = draft.trim()
 
-    if (!text || isBusy) return
+    if (!text || isBusy) {
+      return
+    }
 
     setDraft("")
 
     try {
       await sendMessage({ text })
     } catch {
+      /*
+       * Restore the user's message if sending failed.
+       */
       setDraft((current) => current || text)
     }
   }
@@ -193,7 +251,11 @@ function ChatPanel({
       <div
         data-testid="chat-status"
         data-state={
-          error ? "error" : isBusy ? "loading" : "ready"
+          error
+            ? "error"
+            : isBusy
+              ? "loading"
+              : "ready"
         }
         aria-busy={isBusy}
         className="shrink-0 border-b border-border px-4 py-3 text-xs text-zinc-500 sm:px-6"
@@ -210,32 +272,42 @@ function ChatPanel({
         data-testid="chat-messages"
         className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 pb-32 sm:px-6 sm:py-6 sm:pb-36"
       >
-        {(messages as UIMessage[]).map((message) => (
-          <article
-            key={message.id}
-            data-testid="chat-message"
-            data-role={message.role}
-            className={
-              "max-w-2xl rounded-2xl px-4 py-3 text-sm leading-relaxed " +
-              (message.role === "user"
-                ? "ml-auto bg-gold text-black"
-                : "mr-auto bg-card text-zinc-100")
-            }
-          >
-            {message.parts.map((part, index) => (
-              <MessagePart
-                key={message.id + "-" + index}
-                part={part}
-              />
-            ))}
-          </article>
-        ))}
+        {(messages as UIMessage[]).map(
+          (message) => (
+            <article
+              key={message.id}
+              data-testid="chat-message"
+              data-role={message.role}
+              className={
+                "max-w-2xl rounded-2xl px-4 py-3 text-sm leading-relaxed " +
+                (message.role === "user"
+                  ? "ml-auto bg-gold text-black"
+                  : "mr-auto bg-card text-zinc-100")
+              }
+            >
+              {message.parts.map(
+                (part, index) => (
+                  <MessagePart
+                    key={
+                      message.id +
+                      "-" +
+                      index
+                    }
+                    part={part}
+                  />
+                ),
+              )}
+            </article>
+          ),
+        )}
       </div>
 
-      {/* Fixed composer — stays at the bottom of the viewport */}
+      {/* Fixed composer */}
       <form
         data-testid="chat-composer"
-        onSubmit={(event) => void send(event)}
+        onSubmit={(event) =>
+          void send(event)
+        }
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 px-3 py-3 shadow-2xl backdrop-blur md:left-60 md:px-6"
       >
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2">
@@ -245,14 +317,18 @@ function ChatPanel({
             disabled={isBusy}
             rows={1}
             placeholder="Tell Jabari what you need…"
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) =>
+              setDraft(event.target.value)
+            }
             className="min-h-12 max-h-40 flex-1 resize-none rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500 disabled:opacity-50"
           />
 
           <button
             type="submit"
             data-testid="chat-send"
-            disabled={isBusy || !draft.trim()}
+            disabled={
+              isBusy || !draft.trim()
+            }
             className="shrink-0 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-gold disabled:opacity-40 sm:px-5"
           >
             Send
@@ -288,7 +364,8 @@ function MessagePart({
 
   const toolName = part.type.slice(5)
 
-  const output = (toolPart.output ?? {}) as {
+  const output = (toolPart.output ??
+    {}) as {
     imageUrl?: string
     citations?: string[]
   }
@@ -297,14 +374,17 @@ function MessagePart({
     <div
       data-testid="chat-tool"
       data-tool={toolName}
-      data-state={toolPart.state ?? "pending"}
+      data-state={
+        toolPart.state ?? "pending"
+      }
       className="my-2 text-xs text-muted-foreground"
     >
       {toolPart.errorText ? (
         <span className="text-red-400">
           {toolPart.errorText}
         </span>
-      ) : toolName === "generateImage" ? (
+      ) : toolName ===
+        "generateImage" ? (
         output.imageUrl ? (
           <img
             src={output.imageUrl}
@@ -312,19 +392,27 @@ function MessagePart({
             className="mt-1 max-w-sm rounded-xl"
           />
         ) : (
-          <span>Generating image…</span>
+          <span>
+            Generating image…
+          </span>
         )
-      ) : toolName === "internetSearch" ? (
+      ) : toolName ===
+        "internetSearch" ? (
         <span>
-          {toolPart.state === "output-available"
+          {toolPart.state ===
+          "output-available"
             ? `Searched the web (${output.citations?.length ?? 0} sources)`
             : "Searching the web…"}
         </span>
       ) : (
         <pre className="overflow-x-auto">
-          {JSON.stringify(toolPart.output ?? null, null, 2)}
+          {JSON.stringify(
+            toolPart.output ?? null,
+            null,
+            2,
+          )}
         </pre>
       )}
     </div>
   )
-    }
+      }
