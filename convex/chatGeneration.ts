@@ -105,7 +105,7 @@ export const generateReply = internalAction({
       )
 
       const result = await generateText({
-        model: google("gemini-2.5-flash"),
+        model: google("gemini-3.8-flash"),
         system: systemPrompt,
         messages,
       })
