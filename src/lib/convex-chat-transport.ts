@@ -12,6 +12,9 @@ function serializable<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+const POLL_INTERVAL_MS = 120
+const MAX_POLL_MS = 5 * 60 * 1000
+
 export class ConvexChatTransport
   implements ChatTransport<UIMessage>
 {
@@ -52,13 +55,17 @@ export class ConvexChatTransport
       const messageText =
         error instanceof Error ? error.message : String(error)
 
-      /*
-       * Give the UI a useful error instead of silently presenting
-       * the generic generation failure.
-       */
-      if (messageText.includes("Conversation not found")) {
+      const normalized = messageText.toLowerCase()
+
+      if (normalized.includes("conversation not found")) {
         throw new Error(
-          "This conversation has expired. Please start a new conversation.",
+          "This conversation is no longer available. Please start a new conversation.",
+        )
+      }
+
+      if (normalized.includes("chat session not found")) {
+        throw new Error(
+          "This chat session has expired. Please start a new conversation.",
         )
       }
 
@@ -79,27 +86,26 @@ export class ConvexChatTransport
       },
     )
 
-    return active
-      ? this.watchRun(active.runId, undefined)
-      : null
+    if (!active) {
+      return null
+    }
+
+    return this.watchRun(active.runId, undefined)
   }
 
   private watchRun(
     runId: Id<"chatRuns">,
     abortSignal: AbortSignal | undefined,
   ) {
-    let unsubscribe: (() => void) | undefined
-    let cursor = 0
     let closed = false
-    let restartQueued = false
+    let cursor = 0
 
     const stream = new ReadableStream<UIMessageChunk>({
       start: (controller) => {
-        const close = () => {
+        const finish = () => {
           if (closed) return
 
           closed = true
-          unsubscribe?.()
           controller.close()
         }
 
@@ -107,101 +113,129 @@ export class ConvexChatTransport
           if (closed) return
 
           closed = true
-          unsubscribe?.()
-          controller.error(error)
+
+          controller.error(
+            error instanceof Error
+              ? error
+              : new Error(String(error)),
+          )
         }
 
-        const watchFromCursor = () => {
+        const onAbort = () => {
           if (closed) return
 
-          unsubscribe?.()
+          closed = true
+          controller.close()
+        }
 
-          const pageStart = cursor
+        if (abortSignal) {
+          if (abortSignal.aborted) {
+            onAbort()
+            return
+          }
 
-          const watch = this.client.watchQuery(
-            api.agentChat.streamRun,
-            {
-              capability: this.capability,
-              runId,
-              cursor,
-            },
+          abortSignal.addEventListener(
+            "abort",
+            onAbort,
+            { once: true },
           )
+        }
 
-          const update = () => {
-            try {
-              const snapshot = watch.localQueryResult()
+        const poll = async () => {
+          const startedAt = Date.now()
 
-              if (!snapshot) return
+          try {
+            while (!closed) {
+              if (
+                Date.now() - startedAt >
+                MAX_POLL_MS
+              ) {
+                throw new Error(
+                  "The reply took too long to finish. Please try again.",
+                )
+              }
+
+              const snapshot =
+                await this.client.query(
+                  api.agentChat.streamRun,
+                  {
+                    capability: this.capability,
+                    runId,
+                    cursor,
+                  },
+                )
+
+              if (closed) {
+                return
+              }
 
               for (const batch of snapshot.batches) {
-                if (batch.end <= cursor) continue
+                if (batch.end <= cursor) {
+                  continue
+                }
 
                 const offset = Math.max(
                   0,
                   cursor - batch.start,
                 )
 
-                for (const chunk of batch.chunks.slice(offset)) {
-                  controller.enqueue(chunk as UIMessageChunk)
+                const chunks =
+                  batch.chunks.slice(offset)
+
+                for (const chunk of chunks) {
+                  controller.enqueue(
+                    chunk as UIMessageChunk,
+                  )
                 }
 
-                cursor = Math.max(cursor, batch.end)
+                cursor = Math.max(
+                  cursor,
+                  batch.end,
+                )
               }
 
               if (
-                snapshot.batches.length === 50 &&
-                cursor > pageStart
+                snapshot.status === "failed"
               ) {
-                unsubscribe?.()
-                unsubscribe = undefined
+                throw new Error(
+                  snapshot.error ??
+                    "Reply generation failed.",
+                )
+              }
 
-                if (!restartQueued) {
-                  restartQueued = true
-
-                  queueMicrotask(() => {
-                    restartQueued = false
-                    watchFromCursor()
-                  })
-                }
-
+              if (
+                snapshot.status === "completed"
+              ) {
+                finish()
                 return
               }
 
-              if (snapshot.status === "failed") {
-                fail(
-                  new Error(
-                    snapshot.error ??
-                      "Reply generation failed.",
-                  ),
-                )
-              } else if (
-                snapshot.status === "completed"
-              ) {
-                close()
-              }
-            } catch (error) {
-              fail(error)
+              await new Promise<void>(
+                (resolve) => {
+                  setTimeout(
+                    resolve,
+                    POLL_INTERVAL_MS,
+                  )
+                },
+              )
+            }
+          } catch (error) {
+            fail(error)
+          } finally {
+            if (abortSignal) {
+              abortSignal.removeEventListener(
+                "abort",
+                onAbort,
+              )
             }
           }
-
-          unsubscribe = watch.onUpdate(update)
-          update()
         }
 
-        watchFromCursor()
-
-        if (abortSignal) {
-          abortSignal.addEventListener(
-            "abort",
-            close,
-            { once: true },
-          )
-        }
+        void poll()
       },
 
       cancel: () => {
         closed = true
-        unsubscribe?.()
       },
     })
 
