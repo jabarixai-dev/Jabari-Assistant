@@ -22,15 +22,129 @@ export const sendConversationReply=action({args:{leadId:v.id("leads"),subject:v.
  await ctx.runMutation(internal.outreach.recordConversationReply,{leadId:lead._id,subject,bodyText:body});
  return null;
 }})
-export const fetchConversationEmails=action({args:{leadId:v.id("leads")},returns:v.array(v.any()),handler:async(ctx,args)=>{
- const userId=await getAuthUserId(ctx);if(!userId)throw new Error("Authentication required.");
- const user=await ctx.runQuery(internal.outreach.getOwnerUser,{userId});if(user?.email?.toLowerCase()!==OWNER_EMAIL)throw new Error("Owner access required.");
- const lead=await ctx.runQuery(internal.outreach.getLeadForReply,{leadId:args.leadId});if(!lead||!lead.email.includes("@"))throw new Error("Lead email is unavailable.");
- const result=await callMacalyJson("/api/client-app/composio-execute",{action:"execute",toolName:"GMAIL_FETCH_EMAILS",appName:"GMAIL",params:{user_id:"me",query:'{from:'+lead.email+' to:'+lead.email+'} newer_than:90d',max_results:30,verbose:false,include_payload:false}});
- const raw=(result.result??{}) as Record<string,any>;if(raw._truncated)throw new Error("Gmail returned too much data.");
- const messages=Array.isArray(raw.data?.messages)?raw.data.messages:[];
- return messages.map((m:any)=>({id:String(m.id??m.messageId??Math.random()),from:String(m.sender??m.from??""),to:String(m.recipient??m.to??""),subject:String(m.subject??""),preview:String(m.preview?.body??m.messageText??m.snippet??""),date:String(m.date??m.timestamp??"")})).slice(0,30);
-}})
+export const fetchConversationEmails = action({
+  args: {
+    leadId: v.id("leads"),
+  },
+
+  returns: v.array(v.any()),
+
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx)
+
+    if (!userId) {
+      throw new Error("Authentication required.")
+    }
+
+    const user = await ctx.runQuery(
+      internal.outreach.getOwnerUser,
+      { userId },
+    )
+
+    if (user?.email?.toLowerCase() !== OWNER_EMAIL) {
+      throw new Error("Owner access required.")
+    }
+
+    const lead = await ctx.runQuery(
+      internal.outreach.getLeadForReply,
+      { leadId: args.leadId },
+    )
+
+    if (!lead || !lead.email.includes("@")) {
+      throw new Error("Lead email is unavailable.")
+    }
+
+    try {
+      const email = lead.email.trim().toLowerCase()
+
+      const result = await callMacalyJson(
+        "/api/client-app/composio-execute",
+        {
+          action: "execute",
+          toolName: "GMAIL_FETCH_EMAILS",
+          appName: "GMAIL",
+          params: {
+            user_id: "me",
+            query: `"${email}" newer_than:90d`,
+            max_results: 30,
+            verbose: false,
+            include_payload: false,
+          },
+        },
+      )
+
+      const raw = (result.result ?? {}) as Record<string, any>
+
+      if (raw._truncated) {
+        throw new Error("Gmail returned too much data.")
+      }
+
+      if (raw.successful === false) {
+        throw new Error(
+          String(
+            raw.error ??
+              "Gmail could not retrieve the conversation.",
+          ),
+        )
+      }
+
+      const messages = Array.isArray(raw.data?.messages)
+        ? raw.data.messages
+        : []
+
+      return messages
+        .map((m: any) => ({
+          id: String(
+            m.id ??
+              m.messageId ??
+              Math.random(),
+          ),
+
+          from: String(
+            m.sender ??
+              m.from ??
+              "",
+          ),
+
+          to: String(
+            m.recipient ??
+              m.to ??
+              "",
+          ),
+
+          subject: String(
+            m.subject ??
+              "",
+          ),
+
+          preview: String(
+            m.preview?.body ??
+              m.messageText ??
+              m.snippet ??
+              "",
+          ),
+
+          date: String(
+            m.date ??
+              m.timestamp ??
+              "",
+          ),
+        }))
+        .slice(0, 30)
+    } catch (error) {
+      console.error(
+        "[outreach] fetchConversationEmails failed:",
+        error,
+      )
+
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Unable to retrieve the Gmail conversation.",
+      )
+    }
+  },
+})
 
 export const createDraft=mutation({args:{leadId:v.id("leads")},returns:v.id("outreachDrafts"),handler:async(ctx,args)=>{await requireOwner(ctx);const lead=await ctx.db.get(args.leadId);if(!lead||!lead.email.includes("@"))throw new Error("Lead has no valid email.");const now=Date.now();const id=await ctx.db.insert("outreachDrafts",{leadId:lead._id,subject:"Drafting your Jabari Tech enquiry follow-up…",bodyText:"The AI is preparing a personalized draft. You can review it before anything is sent.",status:"draft",createdAt:now,updatedAt:now});await ctx.db.insert("outreachEvents",{kind:"draft_created",leadId:lead._id,metadata:{channel:"inbound"},createdAt:now});await ctx.scheduler.runAfter(0,internal.outreach.generateDraft,{draftId:id});return id}})
 export const updateDraft=mutation({args:{draftId:v.id("outreachDrafts"),subject:v.string(),bodyText:v.string()},returns:v.null(),handler:async(ctx,args)=>{await requireOwner(ctx);const draft=await ctx.db.get(args.draftId);if(!draft||draft.status==="sent"||draft.status==="cancelled")throw new Error("This draft can no longer be edited.");await ctx.db.patch(draft._id,{subject:args.subject.trim(),bodyText:args.bodyText.trim(),status:"draft",updatedAt:Date.now()});await ctx.db.insert("outreachEvents",{kind:"draft_updated",leadId:draft.leadId,metadata:{draftId:String(draft._id)},createdAt:Date.now()});return null}})
