@@ -1,11 +1,16 @@
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-const GMAIL_API_URL = "https://gmail.googleapis.com/gmail/v1"
+const GMAIL_API_URL =
+  "https://gmail.googleapis.com/gmail/v1"
 
 function requiredEnv(name: string): string {
   const value = process.env[name]
+
   if (!value) {
-    throw new Error("Missing required Convex environment variable: " + name)
+    throw new Error(
+      "Missing required Convex environment variable: " + name,
+    )
   }
+
   return value
 }
 
@@ -55,7 +60,6 @@ async function gmailRequest(
   })
 
   const text = await response.text()
-
   let data: any = null
 
   if (text) {
@@ -67,12 +71,13 @@ async function gmailRequest(
   }
 
   if (!response.ok) {
-    const message =
-      data?.error?.message ||
-      data?.error_description ||
-      `Gmail API request failed (${response.status}).`
-
-    throw new Error(String(message))
+    throw new Error(
+      String(
+        data?.error?.message ||
+          data?.error_description ||
+          `Gmail API request failed (${response.status}).`,
+      ),
+    )
   }
 
   return data
@@ -81,12 +86,14 @@ async function gmailRequest(
 function base64UrlEncode(value: string): string {
   const bytes = new TextEncoder().encode(value)
   let binary = ""
-
   const chunkSize = 0x8000
 
   for (let i = 0; i < bytes.length; i += chunkSize) {
     binary += String.fromCharCode(
-      ...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)),
+      ...bytes.subarray(
+        i,
+        Math.min(i + chunkSize, bytes.length),
+      ),
     )
   }
 
@@ -97,15 +104,13 @@ function base64UrlEncode(value: string): string {
 }
 
 function encodeHeader(value: string): string {
-  if (!/[^\x00-\x7F]/.test(value)) {
-    return value
-  }
+  if (!/[^\x00-\x7F]/.test(value)) return value
 
   const encoded = base64UrlEncode(value)
     .replace(/-/g, "+")
     .replace(/_/g, "/")
 
-  return `=?UTF-8?B?${encoded}?=`
+  return `=?UTF-8?B?${encoded}=?`
 }
 
 function buildRawEmail({
@@ -193,10 +198,9 @@ export type GmailMessage = {
 }
 
 function headerValue(
-  headers: Array<{
-    name?: string
-    value?: string
-  }> | undefined,
+  headers:
+    | Array<{ name?: string; value?: string }>
+    | undefined,
   name: string,
 ): string {
   const header = headers?.find(
@@ -224,9 +228,7 @@ export async function searchGmailEmails(
 
   const list = await gmailRequest(
     `/users/me/messages?${params.toString()}`,
-    {
-      method: "GET",
-    },
+    { method: "GET" },
   )
 
   const ids = Array.isArray(list?.messages)
@@ -240,18 +242,16 @@ export async function searchGmailEmails(
     ids.map(async (id: string) => {
       const params = new URLSearchParams({
         format: "metadata",
-        metadataHeaders: "From",
       })
 
+      params.append("metadataHeaders", "From")
       params.append("metadataHeaders", "To")
       params.append("metadataHeaders", "Subject")
       params.append("metadataHeaders", "Date")
 
       const message = await gmailRequest(
         `/users/me/messages/${encodeURIComponent(id)}?${params.toString()}`,
-        {
-          method: "GET",
-        },
+        { method: "GET" },
       )
 
       const headers = Array.isArray(
