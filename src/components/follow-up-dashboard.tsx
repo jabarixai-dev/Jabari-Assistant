@@ -9,6 +9,7 @@ export function FollowUpDashboard(){
   const rows=useQuery(api.outreach.listFollowUpDashboard,isAuthenticated?{}:"skip") as any[]|undefined
   const pause=useMutation(api.outreach.pauseFollowUp)
   const cancel=useMutation(api.outreach.cancelProspectSend)
+  const deleteFollowUp=useMutation(api.outreach.deleteFollowUp)
   const trigger=useAction(api.outreach.triggerFollowUp)
   const [busy,setBusy]=useState<string|null>(null)
   const [message,setMessage]=useState("")
@@ -53,6 +54,7 @@ export function FollowUpDashboard(){
             {(r.state==="scheduled"||r.state==="sent")&&<button disabled={working} onClick={()=>void act(id,()=>trigger({draftId:r._id}),"Follow-up triggered.")} className="rounded-lg bg-[#d4af37] px-3 py-2 text-xs font-semibold text-black">Send follow-up now</button>}
             {r.state==="bounced"&&<span className="rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300">Automation stopped</span>}
             {r.state==="follow_up_sent"&&<span className="rounded-lg border border-green-500/20 px-3 py-2 text-xs text-green-300">One follow-up completed</span>}
+            <button disabled={working} onClick={()=>void act(id,()=>deleteFollowUp({draftId:r._id}),"Follow-up record deleted.")} className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-300">Delete</button>
           </div>
         </article>
       })}
