@@ -86,13 +86,13 @@ export const leadMachine=action({
     if(!service||!niche)throw new Error("Enter what you sell and who you want to reach.")
     const baseQueries=customQuery?expandCustomQuery(customQuery,searchDepth):buildQueries(service,niche,location,condition,avoid,siteDomain,emailDomains)
     const expandedQueries=customQuery&&location&&!customQuery.toLowerCase().includes(location.toLowerCase())?baseQueries.map(q=>`${q} "${cleanQueryPart(location)}"`):baseQueries
-    const queryLimit=searchDepth==="Quick"?3:searchDepth==="Deep"?10:6
+    const queryLimit=searchDepth==="Quick"?2:searchDepth==="Deep"?5:3
     const queries=expandedQueries.slice(0,queryLimit);const candidates:any[]=[]
     for(const queryText of queries){const perQueryLimit=searchDepth==="Quick"?10:searchDepth==="Deep"?20:15;const results=await serpApiSearch(queryText,perQueryLimit,location||undefined);for(const item of results.slice(0,perQueryLimit)){const row={query:queryText,name:String(item.title??"Untitled prospect"),url:String(item.url??""),snippet:String(item.snippet??""),source:"google"};if(!row.url||candidateIsNoise(row,avoid))continue;candidates.push(row)}}
     const unique:any[]=[];const seen=new Set<string>();for(const row of candidates){const key=canonicalUrl(row.url);if(seen.has(key))continue;seen.add(key);unique.push(row);if(unique.length>=(searchDepth==="Deep"?60:searchDepth==="Quick"?30:40))break}
-    if(!unique.length)return{queries:queries.length,results:0,qualified:0,review:0}
+    if(!unique.length)return{queries:queries.length,serpSearches:queries.length,results:0,qualified:0,review:0}
     const needsWebsiteCheck=(row:any)=>{if(isIndependentWebsite(row.url))return false;if(condition==="Any potential buyer")return false;return true}
-    const crossChecked:any[]=[];const checkLimit=searchDepth==="Quick"?5:searchDepth==="Deep"?20:10
+    const crossChecked:any[]=[];const checkLimit=searchDepth==="Quick"?1:searchDepth==="Deep"?6:3
     for(const row of unique.filter(needsWebsiteCheck).slice(0,checkLimit)){const check=await websiteCrossCheck(row.name,location);crossChecked.push({...row,websiteEvidence:check.evidence,websiteFound:check.found})}
     const checkedMap=new Map(crossChecked.map((x:any)=>[canonicalUrl(x.url),x]));const enrichedCandidates=unique.map((row:any)=>{if(isIndependentWebsite(row.url))return{...row,websiteEvidence:[],websiteFound:true};return checkedMap.get(canonicalUrl(row.url))||{...row,websiteEvidence:[],websiteFound:false}})
     const prompt=JSON.stringify({target:{service,niche,location,condition,avoid},candidates:enrichedCandidates})
@@ -100,7 +100,7 @@ export const leadMachine=action({
     const analyzed=parseJson(aiText);const byUrl=new Map<string,any>();for(const item of Array.isArray(analyzed)?analyzed:[]){if(item&&item.url)byUrl.set(canonicalUrl(String(item.url)),item)}
     const rows:any[]=[];let qualified=0,review=0;const now=Date.now()
     for(const row of unique){const q=byUrl.get(canonicalUrl(row.url));if(!q||q.real_business===false||q.buyer_fit===false)continue;const evidenceRow=checkedMap.get(canonicalUrl(row.url));let websiteStatus=String(q.website_status||"unknown");if(isIndependentWebsite(row.url))websiteStatus="has_website";else if(evidenceRow?.websiteFound)websiteStatus="has_website";else if(websiteStatus==="unknown"&&condition==="No website")websiteStatus="no_website";const websiteEvidence=evidenceRow?.websiteEvidence||[];const conditionMatches=condition==="No website"?websiteStatus==="no_website":condition==="Weak/outdated website"?websiteStatus==="weak_or_broken":condition==="Either"?["no_website","weak_or_broken"].includes(websiteStatus):true;const qualifies=q.qualified===true&&websiteStatus!=="has_website"&&conditionMatches;const status=qualifies?"qualified":"review";if(status==="qualified")qualified++;else review++;rows.push({...row,targetService:service,targetNiche:niche,targetLocation:location,targetCondition:condition,avoidTerms:avoid,qualificationStatus:status,qualificationReason:String(q.reason||"Requires manual review.")+(websiteEvidence.length?` Website cross-check found: ${websiteEvidence.map((x:any)=>x.url).join(", ")}`:" Website cross-check did not surface an independent site; this is not absolute proof the business has no website."),websiteStatus,websiteEvidence:JSON.stringify(websiteEvidence),contactEmail:String(q.contact_email||"")||undefined,contactName:String(q.contact_name||"")||undefined,fitReason:String(q.reason||""),status:"research",createdAt:now,updatedAt:now})}
-    if(rows.length)await ctx.runMutation(internal.research.saveQualifiedResults,{rows});return{queries:queries.length,results:rows.length,qualified,review}
+    if(rows.length)await ctx.runMutation(internal.research.saveQualifiedResults,{rows});return{queries:queries.length,serpSearches:queries.length+crossChecked.length,results:rows.length,qualified,review}
   },
 })
 
