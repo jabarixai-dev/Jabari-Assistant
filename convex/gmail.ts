@@ -1,19 +1,21 @@
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-const GMAIL_API_URL =
-  "https://gmail.googleapis.com/gmail/v1"
+const GMAIL_API_URL = "https://gmail.googleapis.com/gmail/v1"
 
 function requiredEnv(name: string): string {
   const value = process.env[name]
 
   if (!value) {
     throw new Error(
-      "Missing required Convex environment variable: " + name,
+      `Missing required Convex environment variable: ${name}`,
     )
   }
 
   return value
 }
 
+/**
+ * Gets a short-lived Gmail access token using the stored refresh token.
+ */
 async function getAccessToken(): Promise<string> {
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -28,23 +30,37 @@ async function getAccessToken(): Promise<string> {
     }).toString(),
   })
 
-  const data = (await response.json()) as {
+  const text = await response.text()
+
+  let data: {
     access_token?: string
     error?: string
     error_description?: string
+  } = {}
+
+  try {
+    data = text ? JSON.parse(text) : {}
+  } catch {
+    throw new Error(
+      `Google OAuth returned an invalid response (${response.status}).`,
+    )
   }
 
   if (!response.ok || !data.access_token) {
-    throw new Error(
+    const details =
       data.error_description ||
-        data.error ||
-        "Google OAuth could not refresh the Gmail access token.",
-    )
+      data.error ||
+      `HTTP ${response.status}`
+
+    throw new Error(`Google OAuth token refresh failed: ${details}`)
   }
 
   return data.access_token
 }
 
+/**
+ * Makes an authenticated Gmail API request.
+ */
 async function gmailRequest(
   path: string,
   init: RequestInit = {},
@@ -55,11 +71,13 @@ async function gmailRequest(
     ...init,
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
       ...(init.headers ?? {}),
     },
   })
 
   const text = await response.text()
+
   let data: any = null
 
   if (text) {
@@ -71,30 +89,37 @@ async function gmailRequest(
   }
 
   if (!response.ok) {
+    const message =
+      data?.error?.message ||
+      data?.error_description ||
+      data?.error?.errors?.[0]?.message ||
+      `Gmail API request failed with HTTP ${response.status}.`
+
     throw new Error(
-      String(
-        data?.error?.message ||
-          data?.error_description ||
-          `Gmail API request failed (${response.status}).`,
-      ),
+      `Gmail API error (${response.status}): ${message}`,
     )
   }
 
   return data
 }
 
+/**
+ * Base64url encoding required by Gmail's messages.send endpoint.
+ */
 function base64UrlEncode(value: string): string {
   const bytes = new TextEncoder().encode(value)
+
   let binary = ""
+
   const chunkSize = 0x8000
 
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(
-      ...bytes.subarray(
-        i,
-        Math.min(i + chunkSize, bytes.length),
-      ),
+    const chunk = bytes.subarray(
+      i,
+      Math.min(i + chunkSize, bytes.length),
     )
+
+    binary += String.fromCharCode(...chunk)
   }
 
   return btoa(binary)
@@ -103,16 +128,51 @@ function base64UrlEncode(value: string): string {
     .replace(/=+$/g, "")
 }
 
+/**
+ * Encodes non-ASCII email headers safely.
+ */
 function encodeHeader(value: string): string {
-  if (!/[^\x00-\x7F]/.test(value)) return value
+  if (/^[\x00-\x7F]*$/.test(value)) {
+    return value
+  }
 
-  const encoded = base64UrlEncode(value)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/")
+  const bytes = new TextEncoder().encode(value)
 
-  return `=?UTF-8?B?${encoded}=?`
+  let binary = ""
+
+  const chunkSize = 0x8000
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(
+      i,
+      Math.min(i + chunkSize, bytes.length),
+    )
+
+    binary += String.fromCharCode(...chunk)
+  }
+
+  const encoded = btoa(binary)
+
+  return `=?UTF-8?B?${encoded}?=`
 }
 
+/**
+ * Normalizes an email address before putting it into a MIME header.
+ */
+function cleanEmailAddress(value: string): string {
+  return value.trim().replace(/[\r\n]/g, "")
+}
+
+/**
+ * Prevents CRLF/header injection in email headers.
+ */
+function cleanHeaderValue(value: string): string {
+  return value.trim().replace(/[\r\n]/g, " ")
+}
+
+/**
+ * Builds a standards-compliant multipart/alternative MIME email.
+ */
 function buildRawEmail({
   from,
   to,
@@ -126,16 +186,39 @@ function buildRawEmail({
   html: string
   text: string
 }): string {
-  const boundary =
-    "jabari_" + crypto.randomUUID().replace(/-/g, "")
+  const safeFrom = cleanEmailAddress(from)
+  const safeTo = cleanEmailAddress(to)
+  const safeSubject = cleanHeaderValue(subject)
 
-  const safeText = text.replace(/\r?\n/g, "\r\n")
-  const safeHtml = html.replace(/\r?\n/g, "\r\n")
+  if (!safeFrom.includes("@")) {
+    throw new Error("Invalid sender email address.")
+  }
+
+  if (!safeTo.includes("@")) {
+    throw new Error("Invalid recipient email address.")
+  }
+
+  if (!safeSubject) {
+    throw new Error("Email subject cannot be empty.")
+  }
+
+  const boundary =
+    `----=_Jabari_${crypto.randomUUID().replace(/-/g, "")}`
+
+  const safeText = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\r\n")
+
+  const safeHtml = html
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "\r\n")
 
   const mime = [
-    `From: Jabari <${from}>`,
-    `To: ${to}`,
-    `Subject: ${encodeHeader(subject)}`,
+    `From: Jabari <${safeFrom}>`,
+    `To: ${safeTo}`,
+    `Subject: ${encodeHeader(safeSubject)}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     "",
@@ -158,6 +241,9 @@ function buildRawEmail({
   return base64UrlEncode(mime)
 }
 
+/**
+ * Sends an email through the Gmail API.
+ */
 export async function sendGmailEmail({
   from,
   to,
@@ -184,7 +270,9 @@ export async function sendGmailEmail({
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ raw }),
+    body: JSON.stringify({
+      raw,
+    }),
   })
 }
 
@@ -199,7 +287,10 @@ export type GmailMessage = {
 
 function headerValue(
   headers:
-    | Array<{ name?: string; value?: string }>
+    | Array<{
+        name?: string
+        value?: string
+      }>
     | undefined,
   name: string,
 ): string {
@@ -212,23 +303,37 @@ function headerValue(
   return String(header?.value ?? "")
 }
 
+/**
+ * Searches Gmail messages and retrieves their basic metadata.
+ *
+ * Requires:
+ *   https://www.googleapis.com/auth/gmail.readonly
+ */
 export async function searchGmailEmails(
   query: string,
   maxResults = 30,
 ): Promise<GmailMessage[]> {
+  const safeQuery = query.trim()
+
+  if (!safeQuery) {
+    return []
+  }
+
   const capped = Math.max(
     1,
     Math.min(100, Math.floor(maxResults)),
   )
 
   const params = new URLSearchParams({
-    q: query,
+    q: safeQuery,
     maxResults: String(capped),
   })
 
   const list = await gmailRequest(
     `/users/me/messages?${params.toString()}`,
-    { method: "GET" },
+    {
+      method: "GET",
+    },
   )
 
   const ids = Array.isArray(list?.messages)
@@ -237,6 +342,10 @@ export async function searchGmailEmails(
         .filter(Boolean)
         .slice(0, capped)
     : []
+
+  if (ids.length === 0) {
+    return []
+  }
 
   const messages = await Promise.all(
     ids.map(async (id: string) => {
@@ -251,7 +360,9 @@ export async function searchGmailEmails(
 
       const message = await gmailRequest(
         `/users/me/messages/${encodeURIComponent(id)}?${params.toString()}`,
-        { method: "GET" },
+        {
+          method: "GET",
+        },
       )
 
       const headers = Array.isArray(
