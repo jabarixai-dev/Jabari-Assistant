@@ -105,7 +105,42 @@ export const leadMachine=action({
 })
 
 export const saveResults=internalMutation({args:{rows:v.array(v.object({query:v.string(),name:v.string(),url:v.string(),snippet:v.string(),source:v.string()}))},handler:async(ctx,args)=>{const now=Date.now();for(const row of args.rows){const existing=await ctx.db.query("prospects").withIndex("by_url",q=>q.eq("url",row.url)).first();if(existing)await ctx.db.patch(existing._id,{...row,status:existing.status==="discarded"?"research":existing.status,updatedAt:now});else{const id=await ctx.db.insert("prospects",{...row,status:"research",targetService:"",targetNiche:"",targetLocation:"",targetCondition:"",avoidTerms:"",qualificationStatus:"unknown",qualificationReason:"",websiteStatus:"unknown",analysisStatus:"pending",contactStatus:"not_checked",createdAt:now,updatedAt:now});await ctx.db.insert("outreachEvents",{kind:"prospect_researched",prospectId:id,metadata:{query:row.query,source:row.source},createdAt:now})}}}})
-export const saveQualifiedResults=internalMutation({args:{rows:v.array(v.any())},handler:async(ctx,args)=>{const now=Date.now();for(const row of args.rows){const existing=await ctx.db.query("prospects").withIndex("by_url",q=>q.eq("url",row.url)).first();const base={query:String(row.query),name:String(row.name),url:String(row.url),snippet:String(row.snippet),source:String(row.source),targetService:row.targetService,targetNiche:row.targetNiche,targetLocation:row.targetLocation,targetCondition:row.targetCondition,avoidTerms:row.avoidTerms,qualificationStatus:row.qualificationStatus,qualificationReason:row.qualificationReason,websiteStatus:row.websiteStatus,contactEmail:row.contactEmail,contactName:row.contactName,fitReason:row.fitReason,analysisStatus:row.analysisStatus||"pending",contactStatus:row.contactStatus||"not_checked",status:(existing?.status==="saved"?"saved":"research") as "saved"|"research",updatedAt:now};if(existing)await ctx.db.patch(existing._id,base);else{const id=await ctx.db.insert("prospects",{...base,createdAt:now});await ctx.db.insert("outreachEvents",{kind:"prospect_researched",prospectId:id,metadata:{query:row.query,qualification:row.qualificationStatus,websiteStatus:row.websiteStatus},createdAt:now})}}}})
+
+export const saveQualifiedResults=internalMutation({
+  args:{rows:v.array(v.any())},
+  handler:async(ctx,args)=>{
+    const now=Date.now()
+    for(const row of args.rows){
+      const existing=await ctx.db.query("prospects").withIndex("by_url",q=>q.eq("url",row.url)).first()
+      const base={
+        query:String(row.query),name:String(row.name),url:String(row.url),snippet:String(row.snippet),source:String(row.source),
+        targetService:row.targetService,targetNiche:row.targetNiche,targetLocation:row.targetLocation,targetCondition:row.targetCondition,avoidTerms:row.avoidTerms,
+        qualificationStatus:row.qualificationStatus,qualificationReason:row.qualificationReason,websiteStatus:row.websiteStatus,
+        contactEmail:row.contactEmail ?? existing?.contactEmail,
+        contactName:row.contactName ?? existing?.contactName,
+        fitReason:existing?.fitReason ?? row.fitReason,
+        analysisStatus:existing?.analysisStatus ?? row.analysisStatus ?? "pending",
+        contactStatus:existing?.contactStatus ?? row.contactStatus ?? "not_checked",
+        contactPhone:existing?.contactPhone,
+        contactSource:existing?.contactSource,
+        contactEvidence:existing?.contactEvidence,
+        contactCheckedAt:existing?.contactCheckedAt,
+        painPoint:existing?.painPoint,
+        outreachSubject:existing?.outreachSubject,
+        outreachBody:existing?.outreachBody,
+        websiteEvidence:row.websiteEvidence ? (typeof row.websiteEvidence==="string" ? JSON.parse(row.websiteEvidence) : row.websiteEvidence) : existing?.websiteEvidence,
+        status:(existing?.status==="saved"?"saved":"research") as "saved"|"research",
+        updatedAt:now
+      }
+      if(existing) await ctx.db.patch(existing._id,base)
+      else {
+        const id=await ctx.db.insert("prospects",{...base,createdAt:now})
+        await ctx.db.insert("outreachEvents",{kind:"prospect_researched",prospectId:id,metadata:{query:row.query,qualification:row.qualificationStatus,websiteStatus:row.websiteStatus},createdAt:now})
+      }
+    }
+  }
+})
+
 export const listRecent=query({args:{},handler:async(ctx)=>{await requireOwner(ctx);return await ctx.db.query("prospects").withIndex("by_status_and_updatedAt").order("desc").take(50)}})
 export const updateStatus=mutation({args:{prospectId:v.id("prospects"),status:v.union(v.literal("research"),v.literal("saved"),v.literal("discarded"))},handler:async(ctx,args)=>{await requireOwner(ctx);await ctx.db.patch(args.prospectId,{status:args.status,updatedAt:Date.now()})}})
 function parseObject(text:string){const cleaned=text.trim().replace(/^```json\s*/i,"").replace(/```\s*$/,"").trim();try{return JSON.parse(cleaned)}catch{const a=cleaned.indexOf("{"),b=cleaned.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(cleaned.slice(a,b+1))}catch{}}return {}}}
@@ -120,7 +155,13 @@ export const enrichContact=action({args:{prospectId:v.id("prospects")},handler:a
 export const setContactStatus=internalMutation({args:{prospectId:v.id("prospects"),status:v.union(v.literal("not_checked"),v.literal("verified"),v.literal("no_contact"),v.literal("needs_review")),checkedAt:v.number()},handler:async(ctx,args)=>{await ctx.db.patch(args.prospectId,{contactStatus:args.status,contactCheckedAt:args.checkedAt,updatedAt:args.checkedAt})}})
 export const saveContact=internalMutation({args:{prospectId:v.id("prospects"),contactEmail:v.optional(v.string()),contactPhone:v.optional(v.string()),contactName:v.optional(v.string()),contactSource:v.optional(v.string()),contactEvidence:v.optional(v.string()),status:v.union(v.literal("not_checked"),v.literal("verified"),v.literal("no_contact"),v.literal("needs_review")),checkedAt:v.number()},handler:async(ctx,args)=>{await ctx.db.patch(args.prospectId,{contactEmail:args.contactEmail,contactPhone:args.contactPhone,contactName:args.contactName,contactSource:args.contactSource,contactEvidence:args.contactEvidence,contactStatus:args.status,contactCheckedAt:args.checkedAt,updatedAt:args.checkedAt});const kind=args.status==="verified"?"contact_verified":args.status==="no_contact"?"contact_not_found":"contact_review_needed";await ctx.db.insert("outreachEvents",{kind:kind as any,prospectId:args.prospectId,metadata:{hasEmail:Boolean(args.contactEmail),hasPhone:Boolean(args.contactPhone),source:args.contactSource||null},createdAt:args.checkedAt})}})
 export const convertToContact=mutation({args:{prospectId:v.id("prospects")},returns:v.object({contactId:v.id("contacts"),created:v.boolean()}),handler:async(ctx,args)=>{await requireOwner(ctx);const p=await ctx.db.get(args.prospectId);if(!p)throw new Error("Prospect not found.");const email=p.contactEmail?.trim().toLowerCase();const phone=p.contactPhone?.trim();if(!email&&!phone)throw new Error("Verify a public email or phone before adding this prospect to CRM.");let contact:any=email?await ctx.db.query("contacts").withIndex("by_email",q=>q.eq("email",email)).first():null;if(!contact&&phone){const rows=await ctx.db.query("contacts").withIndex("by_updatedAt").order("desc").take(500);contact=rows.find((x:any)=>x.phone===phone)}const now=Date.now();if(contact){await ctx.db.patch(contact._id,{name:p.contactName||contact.name,phone:phone||contact.phone,email:email||contact.email,company:contact.company||p.name,website:contact.website||p.url,updatedAt:now});await ctx.db.insert("crmActivities",{contactId:contact._id,type:"note",title:"Prospect linked to CRM",detail:"Converted from prospect research: "+p.name,createdAt:now});return{contactId:contact._id,created:false}}const contactId=await ctx.db.insert("contacts",{name:p.contactName||p.name,email:email||"unknown@local.invalid",company:p.name,phone:phone||undefined,website:p.url,source:"prospect_research",createdAt:now,updatedAt:now});await ctx.db.insert("crmActivities",{contactId,type:"note",title:"Prospect added to CRM",detail:"Added from prospect research: "+p.name,createdAt:now});return{contactId,created:true}}})
-async function deleteProspectData(ctx:any,id:any){const drafts=await ctx.db.query("prospectOutreachDrafts").withIndex("by_prospectId_and_updatedAt",q=>q.eq("prospectId",id)).collect();for(const d of drafts)await ctx.db.delete(d._id);const events=await ctx.db.query("outreachEvents").withIndex("by_prospectId_and_createdAt",q=>q.eq("prospectId",id)).collect();for(const e of events)await ctx.db.delete(e._id);await ctx.db.delete(id)}
+async function deleteProspectData(ctx:any,id:any){
+  const drafts=await ctx.db.query("prospectOutreachDrafts").withIndex("by_prospectId_and_updatedAt",q=>q.eq("prospectId",id)).collect()
+  for(const d of drafts)await ctx.db.delete(d._id)
+  const events=await ctx.db.query("outreachEvents").withIndex("by_createdAt").order("desc").take(500)
+  for(const e of events)if(e.prospectId===id)await ctx.db.delete(e._id)
+  await ctx.db.delete(id)
+}
 export const deleteProspect=mutation({args:{prospectId:v.id("prospects")},handler:async(ctx,args)=>{await requireOwner(ctx);const prospect=await ctx.db.get(args.prospectId);if(!prospect)return{deleted:0};await deleteProspectData(ctx,args.prospectId);return{deleted:1}}});
 export const clearResearchHistory=mutation({args:{},handler:async(ctx)=>{await requireOwner(ctx);const rows=await ctx.db.query("prospects").withIndex("by_status_and_updatedAt",q=>q.eq("status","research")).collect();for(const p of rows)await deleteProspectData(ctx,p._id);return{deleted:rows.length}}});
 export const clearProspectsHistory=mutation({args:{},handler:async(ctx)=>{await requireOwner(ctx);const rows=await ctx.db.query("prospects").collect();const deletable=rows.filter((p:any)=>p.status!=="saved"&&!(p.contactStatus==="verified"&&Boolean(p.contactEmail||p.contactPhone)));for(const p of deletable)await deleteProspectData(ctx,p._id);return{deleted:deletable.length,protected:rows.length-deletable.length}}});
