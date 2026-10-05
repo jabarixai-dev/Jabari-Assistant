@@ -22,7 +22,7 @@ async function generateGeminiText(system: string, prompt: string) {
   if (!apiKey) throw new Error("Missing required Convex environment variable: GEMINI_API_KEY")
 
   const primary = process.env.GEMINI_MODEL || "gemini-3.8-flash"
-  const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.8-flash"
+  const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash"
   let lastError = ""
 
   for (const model of [...new Set([primary, fallback])]) {
