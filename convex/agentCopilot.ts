@@ -1,11 +1,11 @@
 "use node"
 
 import { generateText } from "ai"
+import { google } from "@ai-sdk/google"
 import { v } from "convex/values"
 import { getAuthUserId } from "@convex-dev/auth/server"
 import { action } from "./_generated/server"
 import { internal } from "./_generated/api"
-import { createMacalyLanguageModel } from "./macalyModel"
 
 function env(name: string) {
   const value = process.env[name]
@@ -37,6 +37,7 @@ export const analyzeLead = action({
     const activities = (detail.activities ?? []).slice(0, 20).map((item: any) =>
       `- ${clean(item.title)}: ${clean(item.detail)}`
     ).join("\n")
+
     const conversation = (detail.messages ?? []).slice(-30).map((message: any) => {
       const text = (message.parts ?? [])
         .filter((part: any) => part.type === "text")
@@ -46,14 +47,9 @@ export const analyzeLead = action({
       return text ? `${message.role === "user" ? "Visitor" : "Assistant"}: ${text}` : ""
     }).filter(Boolean).join("\n")
 
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash"
     const result = await generateText({
-      model: createMacalyLanguageModel({
-        baseUrl: env("MACALY_BASE_URL"),
-        apiToken: env("MACALY_API_TOKEN"),
-        chatId: env("MACALY_CHAT_ID"),
-        bypassHeader: process.env.MACALY_BYPASS_HEADER,
-        preset: "REASONING",
-      }),
+      model: google(model),
       temperature: 0.2,
       system: [
         "You are Jabari Tech's internal Lead Copilot.",
