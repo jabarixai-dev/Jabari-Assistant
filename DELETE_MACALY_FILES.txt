@@ -1,0 +1,5 @@
+Delete these obsolete files from the GitHub repo:
+
+convex/macaly.ts
+convex/macalyModel.ts
+convex/macaly-model.test.ts

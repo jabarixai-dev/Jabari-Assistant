@@ -1,0 +1,44 @@
+JABARI ASSISTANT — RESEARCH SYSTEM FIX BUNDLE
+
+Target repository:
+jabarixai-dev/Jabari-Assistant
+
+What this bundle fixes:
+1. Convex prospects.websiteEvidence now accepts the structured Serp evidence objects:
+   { title, url, snippet }
+   It also accepts legacy strings so existing Convex rows do not block the schema deployment.
+2. Serp results are saved immediately after discovery, before website cross-checking or Gemini analysis.
+   This means search results remain visible even if a later check fails.
+3. Website cross-check failures no longer become "no website" and therefore no longer create false qualified prospects.
+4. Gemini analysis has transient-error retries and a configurable fallback model.
+5. Gemini is NOT part of the leadMachine/search stage. It only runs when Analyze & draft or Find contact is explicitly triggered.
+6. The active Agent Copilot no longer uses Macaly; it uses @ai-sdk/google and GEMINI_MODEL.
+7. Macaly files are listed for deletion.
+
+FILES:
+- convex/schema.ts
+- convex/research.ts
+- convex/agentCopilot.ts
+
+DELETE FROM THE REPOSITORY:
+- convex/macaly.ts
+- convex/macalyModel.ts
+- convex/macaly-model.test.ts
+
+ENVIRONMENT:
+- GEMINI_API_KEY is required by convex/research.ts.
+- GEMINI_MODEL is optional. Default: gemini-3.8-flash
+- GEMINI_FALLBACK_MODEL is optional. Default: gemini-2.5-flash
+- Agent Copilot uses GEMINI_MODEL, defaulting to gemini-2.5-flash.
+- Existing SERP_API_KEY / SERPAPI_KEY configuration is left untouched.
+
+IMPORTANT:
+Deploy the schema and backend files together. Do not mix the old research.ts with the new schema.ts.
+
+After replacing the files:
+1. Run TypeScript/Convex validation.
+2. Search for "MACALY_" and "createMacalyLanguageModel" in the repo.
+3. Delete the three Macaly files listed above.
+4. Run one real prospect search.
+5. Confirm Serp results appear before clicking Analyze & draft.
+6. Click Analyze & draft on one prospect and confirm analysisStatus becomes ready.
