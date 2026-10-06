@@ -269,6 +269,30 @@ function candidateHasPublicEmail(row: any, emailDomains: string) {
   return emails.some((email) => domains.includes(email.toLowerCase().split("@")[1] || ""))
 }
 
+function candidateMatchesSourceDomain(row: any, siteDomain: string) {
+  const requested = cleanQueryPart(siteDomain)
+    .replace(/^https?:\/\//i, "")
+    .replace(/^www\./i, "")
+    .replace(/\/$/, "")
+    .toLowerCase()
+  if (!requested) return true
+
+  let url: URL
+  try {
+    url = new URL(String(row?.url || ""))
+  } catch {
+    return false
+  }
+
+  const host = url.hostname.toLowerCase().replace(/^www\./, "")
+  if (requested === "googlemaps.com" || requested === "maps.google.com" || requested === "google.com/maps") {
+    return host === "google.com" && url.pathname.toLowerCase().startsWith("/maps")
+  }
+
+  const requestedHost = requested.split("/")[0]
+  return host === requestedHost || host.endsWith("." + requestedHost)
+}
+
 function candidateIsNoise(row: any, avoidTerms: string) {
   const hay = (String(row.name) + " " + String(row.url) + " " + String(row.snippet)).toLowerCase()
   const path = String(row.url).toLowerCase()
@@ -372,6 +396,7 @@ export const leadMachine = action({
           source: "google",
         }
         if (!row.url || candidateIsNoise(row, avoid)) continue
+        if (!candidateMatchesSourceDomain(row, siteDomain)) continue
         if (!candidateMatchesTarget(row, niche, location)) continue
         // The search query intentionally contains the requested public-email
         // domains, but SerpApi/Google does not always expose the matched email
@@ -448,7 +473,6 @@ export const leadMachine = action({
       rows.push({
         ...row,
         targetService: service,
-        publicEmailFound: Boolean((row as any).publicEmailFound),
         targetNiche: niche,
         targetLocation: location,
         targetCondition: condition,
