@@ -733,37 +733,44 @@ export const enrichContact = action({
         JSON.stringify({ prospect: p, results }),
       )
 
-      // If Gemini is temporarily unavailable, keep the workflow alive. Only use
-      // contact values explicitly present in the returned public search text.
+      // Always inspect raw public search evidence as a deterministic fallback.
+      // Gemini may be unavailable, may return blank contact fields, or may omit a
+      // detail that is plainly present in a search snippet. Never infer details.
+      const evidenceText = results
+        .map((item: any) => [item?.snippet, item?.title, item?.url].map((v: any) => String(v ?? "")).join(" "))
+        .join(" ")
+      const evidenceEmail = normalizeEmail(
+        evidenceText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "",
+      )
+      const evidencePhone = normalizePhone(
+        evidenceText.match(/(?:\+?\d[\d().\s-]{7,}\d)/)?.[0] || "",
+        p.targetLocation,
+      )
+
       if (!rText) {
-        const evidenceText = results
-          .map((item: any) => String(item?.snippet ?? "") + " " + String(item?.title ?? ""))
-          .join(" ")
-        const emailMatch = evidenceText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i)
-        const phoneMatch = evidenceText.match(/(?:\\+?\\d[\\d().\\s-]{7,}\\d)/)
-        const email = normalizeEmail(emailMatch?.[0] || "")
-        const phone = normalizePhone(phoneMatch?.[0] || "", p.targetLocation)
-        const status = email || phone ? "needs_review" : "no_contact"
+        const status = evidenceEmail || evidencePhone ? "needs_review" : "no_contact"
         await ctx.runMutation(internal.research.saveContact, {
           prospectId: args.prospectId,
-          contactEmail: email || undefined,
-          contactPhone: phone || undefined,
-          contactSource: email || phone ? "Public search evidence (Gemini temporarily unavailable)" : undefined,
-          contactEvidence: email || phone ? "Contact detail was explicitly present in public search results; manual review is required." : undefined,
+          contactEmail: evidenceEmail || undefined,
+          contactPhone: evidencePhone || undefined,
+          contactSource: evidenceEmail || evidencePhone ? "Public search evidence (Gemini temporarily unavailable)" : undefined,
+          contactEvidence: evidenceEmail || evidencePhone ? "Contact detail was explicitly present in public search results; manual review is required." : undefined,
           status,
           checkedAt: Date.now(),
         })
-        return { status, email: email || null, phone: phone || null, aiUnavailable: true }
+        return { status, email: evidenceEmail || null, phone: evidencePhone || null, aiUnavailable: true }
       }
 
       const pick = (label: string) =>
         rText.match(new RegExp(`^\\s*${label}:\\s*(.*?)(?=\\n(?:EMAIL|PHONE|CONTACT|SOURCE|EVIDENCE):|$)`, "is"))?.[1]?.trim() || ""
 
-      const email = normalizeEmail(pick("EMAIL"))
-      const phone = normalizePhone(pick("PHONE"), p.targetLocation)
+      // Prefer AI extraction, but never discard an explicitly displayed value
+      // that the deterministic evidence scan found.
+      const email = normalizeEmail(pick("EMAIL")) || evidenceEmail
+      const phone = normalizePhone(pick("PHONE"), p.targetLocation) || evidencePhone
       const contact = pick("CONTACT")
-      const source = pick("SOURCE")
-      const evidence = pick("EVIDENCE")
+      const source = pick("SOURCE") || (evidenceEmail || evidencePhone ? "Public search evidence" : "")
+      const evidence = pick("EVIDENCE") || (evidenceEmail || evidencePhone ? "Contact detail was explicitly present in public search results; manual review is required." : "")
       const status =
         (email || phone) && source && evidence
           ? "verified"
