@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { generateText } from "ai";
 import { neon } from "@neondatabase/serverless";
-import { createMacalyLanguageModel } from "./lib/macaly-model";
+import { createGeminiModel } from "./lib/ai";
 
 const AUTH_URL="https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth";
 const JWKS_URL="https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json";
@@ -23,16 +23,16 @@ export default async(req:Request)=>{
   if((x.action||"analyze")==="analyze"){
    await sql.query("UPDATE prospects SET analysis_status='pending',updated_at=$1 WHERE id=$2",[now,p.id]);
    try{
-    const extra=await search('"'+p.name+'" "'+p.url+'" contact email owner founder about');const base=Netlify.env.get("MACALY_BASE_URL"),token=Netlify.env.get("MACALY_API_TOKEN"),chat=Netlify.env.get("MACALY_CHAT_ID");if(!base||!token||!chat)throw new Error("AI environment is not configured.");
-    const r=await generateText({model:createMacalyLanguageModel({baseUrl:base,apiToken:token,chatId:chat,bypassHeader:Netlify.env.get("MACALY_BYPASS_HEADER"),preset:"FAST"}),system:"Use only supplied prospect and search evidence. Return JSON keys email, phone, contact, fit, pain, subject, body. Never invent facts or infer contact details.",prompt:JSON.stringify({prospect:p,additionalSearch:extra})});
+    const extra=await search('"'+p.name+'" "'+p.url+'" contact email owner founder about');if(!Netlify.env.get("GEMINI_API_KEY"))throw new Error("GEMINI_API_KEY is not configured.");
+    const r=await generateText({model:createGeminiModel((name) => Netlify.env.get(name)),system:"Use only supplied prospect and search evidence. Return JSON keys email, phone, contact, fit, pain, subject, body. Never invent facts or infer contact details.",prompt:JSON.stringify({prospect:p,additionalSearch:extra})});
     const o=obj(r.text),em=email(String(o.email||"")),ph=phone(String(o.phone||""),String(p.target_location||"")),cn=String(o.contact||"").trim(),fit=String(o.fit||p.qualification_reason||"").trim(),pain=String(o.pain||"Specific website opportunity needs manual review.").trim(),subject=String(o.subject||"Website opportunity for "+p.name).trim(),body=String(o.body||"Hello,\n\nI came across "+p.name+" while researching your space. I had a few ideas that may strengthen your online presence. If useful, I would be happy to share them.\n\nBest,\nJabari Tech").trim();
     await sql.query("UPDATE prospects SET contact_email=$1,contact_phone=$2,contact_name=$3,fit_reason=$4,pain_point=$5,outreach_subject=$6,outreach_body=$7,analysis_status='ready',updated_at=$8 WHERE id=$9",[em,ph,cn||null,fit,pain,subject,body,now,p.id]);await sql.query("INSERT INTO outreach_events (kind,prospect_id,metadata,created_at) VALUES ('prospect_analyzed',$1,$2,$3)",[p.id,JSON.stringify({hasEmail:Boolean(em),hasPhone:Boolean(ph)}),now]);return json({success:true,hasEmail:Boolean(em),hasPhone:Boolean(ph)});
    }catch(e){await sql.query("UPDATE prospects SET analysis_status='failed',updated_at=$1 WHERE id=$2",[Date.now(),p.id]);throw e}
   }
   if(x.action==="enrich"){
    if(p.contact_email||p.contact_phone){await sql.query("UPDATE prospects SET contact_status='verified',contact_checked_at=$1,updated_at=$1 WHERE id=$2",[now,p.id]);return json({status:"verified",email:p.contact_email||null,phone:p.contact_phone||null})}
-   const qs=['"'+p.name+'" "'+p.url+'" email phone','"'+p.name+'" "'+p.url+'" founder owner email phone','"'+p.url+'" contact phone','"'+p.name+'" "contact us" email phone'];const results=(await Promise.all(qs.map(search))).flat();const base=Netlify.env.get("MACALY_BASE_URL"),token=Netlify.env.get("MACALY_API_TOKEN"),chat=Netlify.env.get("MACALY_CHAT_ID");if(!base||!token||!chat)throw new Error("AI environment is not configured.");
-   const r=await generateText({model:createMacalyLanguageModel({baseUrl:base,apiToken:token,chatId:chat,bypassHeader:Netlify.env.get("MACALY_BYPASS_HEADER"),preset:"FAST"}),system:"Extract only publicly displayed contact details. Return exactly EMAIL:, PHONE:, CONTACT:, SOURCE:, EVIDENCE:. Never infer.",prompt:JSON.stringify({prospect:p,results})});
+   const qs=['"'+p.name+'" "'+p.url+'" email phone','"'+p.name+'" "'+p.url+'" founder owner email phone','"'+p.url+'" contact phone','"'+p.name+'" "contact us" email phone'];const results=(await Promise.all(qs.map(search))).flat();if(!Netlify.env.get("GEMINI_API_KEY"))throw new Error("GEMINI_API_KEY is not configured.");
+   const r=await generateText({model:createGeminiModel((name) => Netlify.env.get(name)),system:"Extract only publicly displayed contact details. Return exactly EMAIL:, PHONE:, CONTACT:, SOURCE:, EVIDENCE:. Never infer.",prompt:JSON.stringify({prospect:p,results})});
    const pick=(l:string)=>r.text.match(new RegExp("^\\s*"+l+":\\s*(.*?)(?=\\n(?:EMAIL|CONTACT|SOURCE|EVIDENCE):|$)","is"))?.[1]?.trim()||"";const em=email(pick("EMAIL")),ph=phone(pick("PHONE"),String(p.target_location||"")),cn=pick("CONTACT"),src=pick("SOURCE"),ev=pick("EVIDENCE"),status=(em||ph)&&src&&ev?"verified":(em||ph||cn||src||ev)?"needs_review":"no_contact";
    await sql.query("UPDATE prospects SET contact_email=$1,contact_phone=$2,contact_name=$3,contact_source=$4,contact_evidence=$5,contact_status=$6,contact_checked_at=$7,updated_at=$7 WHERE id=$8",[em,ph,cn||null,src||null,ev||null,status,now,p.id]);await sql.query("INSERT INTO outreach_events (kind,prospect_id,metadata,created_at) VALUES ($1,$2,$3,$4)",[status==="verified"?"contact_verified":status==="no_contact"?"contact_not_found":"contact_review_needed",p.id,JSON.stringify({hasEmail:Boolean(em),hasPhone:Boolean(ph),source:src||null}),now]);return json({status,email:em,phone:ph});
   }

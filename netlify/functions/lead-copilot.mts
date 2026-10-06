@@ -2,7 +2,7 @@ import type { Config } from "@netlify/functions";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { generateText } from "ai";
 import { neon } from "@neondatabase/serverless";
-import { createMacalyLanguageModel } from "./lib/macaly-model";
+import { createGeminiModel } from "./lib/ai";
 
 const AUTH_URL = "https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth";
 const JWKS_URL = "https://ep-polished-term-b5053umh.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json";
@@ -29,10 +29,7 @@ export default async (request: Request) => {
     const input = await request.json() as { leadId?: string; focus?: string };
     if (!input.leadId) return json({ error: "leadId is required" }, 400);
     const databaseUrl = Netlify.env.get("DATABASE_URL");
-    const baseUrl = Netlify.env.get("MACALY_BASE_URL");
-    const apiToken = Netlify.env.get("MACALY_API_TOKEN");
-    const chatId = Netlify.env.get("MACALY_CHAT_ID");
-    if (!databaseUrl || !baseUrl || !apiToken || !chatId) return json({ error: "AI/database environment is not configured" }, 503);
+    if (!databaseUrl || !Netlify.env.get("GEMINI_API_KEY")) return json({ error: "AI/database environment is not configured" }, 503);
     const sql = neon(databaseUrl);
     const leads = await sql`select * from leads where id = ${input.leadId} limit 1`;
     const lead = leads[0];
@@ -44,7 +41,7 @@ export default async (request: Request) => {
     const activityText = activities.map((item) => `- ${clean(item.title)}: ${clean(item.detail)}`).join("\n");
     const conversation = messages.reverse().map((item) => `${item.role === "user" ? "Visitor" : "Assistant"}: ${clean(item.message, "")}`).filter(Boolean).join("\n");
     const result = await generateText({
-      model: createMacalyLanguageModel({ baseUrl, apiToken, chatId, bypassHeader: Netlify.env.get("MACALY_BYPASS_HEADER"), preset: "REASONING" }),
+      model: createGeminiModel((name) => Netlify.env.get(name)),
       temperature: 0.2,
       system: [
         "You are Jabari Tech's internal Lead Copilot.",

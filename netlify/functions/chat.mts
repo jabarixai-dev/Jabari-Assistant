@@ -5,7 +5,7 @@ import {
   streamText,
   type UIMessage,
 } from "ai"
-import { createMacalyLanguageModel } from "./lib/macaly-model"
+import { createGeminiModel } from "./lib/ai"
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -128,13 +128,7 @@ export default async function handler(req: Request, context: Context) {
     const settings = settingsRows[0]
 
     const result = streamText({
-      model: createMacalyLanguageModel({
-        baseUrl: context.netlify.env.get("MACALY_BASE_URL") ?? "",
-        apiToken: context.netlify.env.get("MACALY_API_TOKEN") ?? "",
-        chatId: context.netlify.env.get("MACALY_CHAT_ID") ?? "",
-        bypassHeader: context.netlify.env.get("MACALY_BYPASS_HEADER"),
-        preset: "CODE",
-      }),
+      model: createGeminiModel((name) => context.netlify.env.get(name)),
       system: [
         "You are the AI representative for Jabari Tech.",
         "Be concise, professional, helpful, and honest.",
