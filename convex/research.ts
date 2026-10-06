@@ -140,10 +140,14 @@ function buildQueries(
   const n = cleanQueryPart(niche)
   const l = cleanQueryPart(location)
   const a = cleanQueryPart(avoid)
-  const site = cleanQueryPart(siteDomain)
+  let site = cleanQueryPart(siteDomain)
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/$/, "")
+    .toLowerCase()
+
+  if (site === "googlemaps.com" || site === "maps.googlemaps.com") site = "google.com/maps"
+  if (site === "maps.google.com") site = "google.com/maps"
   const domains = emailDomains
     .split(/[,;|\s]+/)
     .map((x) => x.trim())
@@ -153,9 +157,10 @@ function buildQueries(
   const exclusions =
     "-jobs -hiring -career -agency -agencies -freelancer -freelance -directory -directories -yellowpages -yelp -review -reviews -news"
   const target = [n, l].filter(Boolean).map((x) => `"${x}"`).join(" ")
-  const emailPart = domains.length
-    ? " (" + domains.map((d) => `"@${d}"`).join(" OR ") + ")"
-    : ""
+  // Email-provider filters are for contact enrichment, not lead discovery.
+  // Adding @gmail.com/@yahoo.com to the discovery query attracts unrelated
+  // social posts and generic discussions.
+  const emailPart = ""
   const avoidPart = a
     ? " -" + a.split(/[,;|]/).map((x) => x.trim()).filter(Boolean).join(" -")
     : ""
@@ -167,7 +172,9 @@ function buildQueries(
       : ""
 
   return [
-    platform + target + " " + svc + emailPart + " " + exclusions + avoidPart,
+    // Lead discovery should be driven by the business/niche/location, not
+    // by email-provider text. Contact discovery happens later.
+    platform + target + noSite + weak + " " + exclusions + avoidPart,
     platform + target + " " + svc + ' ("contact" OR "email" OR "WhatsApp") ' + emailPart + " " + exclusions + avoidPart,
     target + " " + svc + ' "contact us" ' + emailPart + " " + exclusions + avoidPart,
     target + " " + svc + ' ("WhatsApp" OR "call" OR "email") ' + emailPart + " " + exclusions + avoidPart,
@@ -208,6 +215,44 @@ function isIndependentWebsite(raw: string) {
   } catch {
     return false
   }
+}
+
+function candidateMatchesTarget(row: any, niche: string, location: string) {
+  const hay = [row?.name, row?.url, row?.snippet]
+    .map((value) => String(value ?? "").toLowerCase())
+    .join(" ")
+
+  const nicheText = niche.trim().toLowerCase()
+  if (nicheText) {
+    const aliases: Record<string, string[]> = {
+      school: ["school", "schools", "academy", "college", "nursery", "primary", "secondary", "education"],
+      schools: ["school", "schools", "academy", "college", "nursery", "primary", "secondary", "education"],
+      dentist: ["dentist", "dental", "dentistry", "clinic"],
+      dentists: ["dentist", "dental", "dentistry", "clinic"],
+      restaurant: ["restaurant", "restaurants", "eatery", "cafe", "café", "kitchen"],
+      restaurants: ["restaurant", "restaurants", "eatery", "cafe", "café", "kitchen"],
+      hotel: ["hotel", "hotels", "guest house", "guesthouse", "resort"],
+      hotels: ["hotel", "hotels", "guest house", "guesthouse", "resort"],
+    }
+    const terms = aliases[nicheText] || [nicheText.replace(/s$/, "")]
+    if (!terms.some((term) => hay.includes(term))) return false
+  }
+
+  const locationText = location.trim().toLowerCase()
+  if (locationText) {
+    const locationTokens = locationText
+      .split(/[^a-z0-9]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length > 2)
+
+    if (locationTokens.length > 1) {
+      if (!locationTokens.every((token) => hay.includes(token))) return false
+    } else if (!hay.includes(locationText)) {
+      return false
+    }
+  }
+
+  return true
 }
 
 function candidateIsNoise(row: any, avoidTerms: string) {
@@ -291,12 +336,12 @@ export const leadMachine = action({
         ? baseQueries.map((q) => `${q} "${cleanQueryPart(location)}"`)
         : baseQueries
 
-    const queryLimit = searchDepth === "Quick" ? 2 : searchDepth === "Deep" ? 5 : 3
+    const queryLimit = searchDepth === "Quick" ? 1 : searchDepth === "Deep" ? 5 : 3
     const queries = expandedQueries.slice(0, queryLimit)
     const candidates: any[] = []
 
     for (const queryText of queries) {
-      const perQueryLimit = searchDepth === "Quick" ? 10 : searchDepth === "Deep" ? 20 : 15
+      const perQueryLimit = searchDepth === "Quick" ? 12 : searchDepth === "Deep" ? 20 : 15
       const results = await serpApiSearch(queryText, perQueryLimit, location || undefined)
       for (const item of results.slice(0, perQueryLimit)) {
         const row = {
@@ -307,13 +352,14 @@ export const leadMachine = action({
           source: "google",
         }
         if (!row.url || candidateIsNoise(row, avoid)) continue
+        if (!candidateMatchesTarget(row, niche, location)) continue
         candidates.push(row)
       }
     }
 
     const unique: any[] = []
     const seen = new Set<string>()
-    const maxResults = searchDepth === "Deep" ? 60 : searchDepth === "Quick" ? 30 : 40
+    const maxResults = searchDepth === "Deep" ? 60 : searchDepth === "Quick" ? 12 : 40
 
     for (const row of candidates) {
       const key = canonicalUrl(row.url)
@@ -335,7 +381,7 @@ export const leadMachine = action({
       !isIndependentWebsite(row.url) && condition !== "Any potential buyer"
 
     const crossChecked: any[] = []
-    const checkLimit = searchDepth === "Quick" ? 1 : searchDepth === "Deep" ? 6 : 3
+    const checkLimit = searchDepth === "Quick" ? 0 : searchDepth === "Deep" ? 6 : 3
 
     for (const row of unique.filter(needsWebsiteCheck).slice(0, checkLimit)) {
       const check = await websiteCrossCheck(row.name, location)
@@ -733,17 +779,14 @@ export const enrichContact = action({
         JSON.stringify({ prospect: p, results }),
       )
 
-      // Always inspect raw public search evidence as a deterministic fallback.
-      // Gemini may be unavailable, may return blank contact fields, or may omit a
-      // detail that is plainly present in a search snippet. Never infer details.
       const evidenceText = results
         .map((item: any) => [item?.snippet, item?.title, item?.url].map((v: any) => String(v ?? "")).join(" "))
         .join(" ")
       const evidenceEmail = normalizeEmail(
-        evidenceText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "",
+        evidenceText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i)?.[0] || "",
       )
       const evidencePhone = normalizePhone(
-        evidenceText.match(/(?:\+?\d[\d().\s-]{7,}\d)/)?.[0] || "",
+        evidenceText.match(/(?:\\+?\\d[\\d().\\s-]{7,}\\d)/)?.[0] || "",
         p.targetLocation,
       )
 
@@ -764,8 +807,6 @@ export const enrichContact = action({
       const pick = (label: string) =>
         rText.match(new RegExp(`^\\s*${label}:\\s*(.*?)(?=\\n(?:EMAIL|PHONE|CONTACT|SOURCE|EVIDENCE):|$)`, "is"))?.[1]?.trim() || ""
 
-      // Prefer AI extraction, but never discard an explicitly displayed value
-      // that the deterministic evidence scan found.
       const email = normalizeEmail(pick("EMAIL")) || evidenceEmail
       const phone = normalizePhone(pick("PHONE"), p.targetLocation) || evidencePhone
       const contact = pick("CONTACT")
