@@ -157,10 +157,12 @@ function buildQueries(
   const exclusions =
     "-jobs -hiring -career -agency -agencies -freelancer -freelance -directory -directories -yellowpages -yelp -review -reviews -news"
   const target = [n, l].filter(Boolean).map((x) => `"${x}"`).join(" ")
-  // Email-provider filters are for contact enrichment, not lead discovery.
-  // Adding @gmail.com/@yahoo.com to the discovery query attracts unrelated
-  // social posts and generic discussions.
-  const emailPart = ""
+  // Email-provider filters are intentional lead-discovery filters: require the
+  // public result to expose an email on one of the requested providers.
+  // Keep the alternatives grouped so Google treats them as one required clause.
+  const emailPart = domains.length
+    ? " (" + domains.map((d) => `"@${d}"`).join(" OR ") + ")"
+    : ""
   const avoidPart = a
     ? " -" + a.split(/[,;|]/).map((x) => x.trim()).filter(Boolean).join(" -")
     : ""
@@ -172,9 +174,8 @@ function buildQueries(
       : ""
 
   return [
-    // Lead discovery should be driven by the business/niche/location, not
-    // by email-provider text. Contact discovery happens later.
-    platform + target + noSite + weak + " " + exclusions + avoidPart,
+    // Require the requested public-email provider in the discovery result.
+    platform + target + emailPart + noSite + weak + " " + exclusions + avoidPart,
     platform + target + " " + svc + ' ("contact" OR "email" OR "WhatsApp") ' + emailPart + " " + exclusions + avoidPart,
     target + " " + svc + ' "contact us" ' + emailPart + " " + exclusions + avoidPart,
     target + " " + svc + ' ("WhatsApp" OR "call" OR "email") ' + emailPart + " " + exclusions + avoidPart,
@@ -255,9 +256,28 @@ function candidateMatchesTarget(row: any, niche: string, location: string) {
   return true
 }
 
+function candidateHasPublicEmail(row: any, emailDomains: string) {
+  const text = [row?.name, row?.url, row?.snippet]
+    .map((value) => String(value ?? ""))
+    .join(" ")
+  const emails = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []
+  const domains = emailDomains
+    .split(/[,;|\s]+/)
+    .map((x) => x.trim().replace(/^@/, "").toLowerCase())
+    .filter(Boolean)
+  if (!domains.length) return emails.length > 0
+  return emails.some((email) => domains.includes(email.toLowerCase().split("@")[1] || ""))
+}
+
 function candidateIsNoise(row: any, avoidTerms: string) {
   const hay = (String(row.name) + " " + String(row.url) + " " + String(row.snippet)).toLowerCase()
   const path = String(row.url).toLowerCase()
+  const socialContentPaths = [
+    "/posts/", "/post/", "/photos/", "/photo/", "/videos/", "/video/",
+    "/reel/", "/reels/", "/stories/", "/story/", "/groups/", "/events/",
+    "/watch", "/p/", "/pin/", "/pins/",
+  ]
+  if (socialContentPaths.some((segment) => path.includes(segment))) return true
   const defaults = [
     "directory", "yellow pages", "business listing", "company listings",
     "list of businesses", "find businesses", "top 10", "top 20",
@@ -353,6 +373,7 @@ export const leadMachine = action({
         }
         if (!row.url || candidateIsNoise(row, avoid)) continue
         if (!candidateMatchesTarget(row, niche, location)) continue
+        if (!candidateHasPublicEmail(row, emailDomains)) continue
         candidates.push(row)
       }
     }
