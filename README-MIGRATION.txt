@@ -19,5 +19,4 @@ After replacing:
 pnpm install
 npx tsc --noEmit
 
-Do not delete convex/macaly.ts or convex/macalyModel.ts until a repository-wide
-search confirms there are no remaining imports/references.
+Macaly runtime adapters have been removed after a repository-wide import/reference check.

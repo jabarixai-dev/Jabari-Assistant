@@ -1,0 +1,27 @@
+Jabari Assistant — stabilization patch
+
+Completed:
+- Removed active Macaly runtime adapters and imports.
+- Migrated Netlify AI paths to @ai-sdk/google with GEMINI_API_KEY/GEMINI_MODEL.
+- Migrated Convex billing/review email sends to direct Gmail OAuth.
+- Migrated Netlify prospect/outreach/billing/campaign email sends to direct Gmail OAuth.
+- Added centralized Netlify Neon Auth helper and corrected the malformed prospects auth hostname.
+- Removed stale Convex generated API references to deleted Macaly modules.
+- Removed the nested project ZIP from the source tree.
+- Switched Netlify's build command from pnpm to npm and set packageManager to npm@10.9.2.
+
+Verification:
+- Repository-wide runtime search reports no createMacalyLanguageModel, callMacalyJson, or MACALY_* references.
+- Repository-wide malformed duplicated Neon Auth hostname search reports no matches.
+- Package installation/build/test could not be completed in this environment because the npm registry is not reachable/cached for @ai-sdk/google.
+- Before production deployment, run: npm install && npx tsc --noEmit && npm test && npm run build.
+
+Required runtime environment:
+- GEMINI_API_KEY
+- GEMINI_MODEL (optional; defaults to gemini-3.8-flash)
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- GMAIL_REFRESH_TOKEN
+- DATABASE_URL (Netlify)
+- NEON_AUTH_URL (optional; bundled Neon Auth URL is the fallback)
+- OWNER_EMAIL (optional; Netlify default is jabari.tech.org@gmail.com)

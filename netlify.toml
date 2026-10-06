@@ -1,5 +1,5 @@
 [build]
-  command = "npx convex deploy --cmd 'pnpm run build' --cmd-url-env-var-name VITE_CONVEX_URL"
+  command = "npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name VITE_CONVEX_URL"
   publish = "dist"
   functions = "netlify/functions"
 

@@ -1,5 +1,2 @@
-Delete these obsolete files from the GitHub repo:
-
-convex/macaly.ts
-convex/macalyModel.ts
-convex/macaly-model.test.ts
+Macaly runtime adapters were removed during the migration.
+No deletion step remains.
