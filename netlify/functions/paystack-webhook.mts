@@ -23,7 +23,7 @@ export default async (req:Request)=>{
   if(event?.event!=="charge.success" || !event.data?.reference) return new Response("OK",{status:200});
 
   const reference=String(event.data.reference);
-  const verify=await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,{headers:{Authorization:`Bearer ${secret}`}});
+  const verify=await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,{headers:{Authorization: "Bearer " + secret}});
   if(!verify.ok) return new Response("Paystack verification failed.",{status:502});
   const verified:any=await verify.json();
   if(!verified.status || verified.data?.status!=="success") return new Response("OK",{status:200});
