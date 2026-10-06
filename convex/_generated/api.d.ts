@@ -31,8 +31,6 @@ import type * as http from "../http.js";
 import type * as landingPages from "../landingPages.js";
 import type * as leadForms from "../leadForms.js";
 import type * as leads from "../leads.js";
-import type * as macaly from "../macaly.js";
-import type * as macalyModel from "../macalyModel.js";
 import type * as opportunities from "../opportunities.js";
 import type * as outreach from "../outreach.js";
 import type * as outreachMetrics from "../outreachMetrics.js";
@@ -72,8 +70,6 @@ declare const fullApi: ApiFromModules<{
   landingPages: typeof landingPages;
   leadForms: typeof leadForms;
   leads: typeof leads;
-  macaly: typeof macaly;
-  macalyModel: typeof macalyModel;
   opportunities: typeof opportunities;
   outreach: typeof outreach;
   outreachMetrics: typeof outreachMetrics;
