@@ -378,7 +378,7 @@ export const leadMachine = action({
         // in the returned snippet. Keep the relevant result for review instead
         // of discarding the entire lead. The visible email is still captured
         // when present and used as evidence downstream.
-        candidates.push({ ...row, publicEmailFound: candidateHasPublicEmail(row, emailDomains) })
+        candidates.push(row)
       }
     }
 
