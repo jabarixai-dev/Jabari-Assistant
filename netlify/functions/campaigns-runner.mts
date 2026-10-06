@@ -21,7 +21,8 @@ async function sendGmail(lead: any, step: any) {
   const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:clientId,client_secret:clientSecret,refresh_token:refreshToken,grant_type:"refresh_token"})});const token=await tokenResponse.json() as any;if(!tokenResponse.ok||!token.access_token)throw new Error("Google OAuth token refresh failed.");
   const subject=render(String(step.subject||""),lead),body=render(String(step.body||""),lead),sender=Netlify.env.get("OWNER_EMAIL")||"jabari.tech.org@gmail.com",clean=(v:string)=>v.replace(/[\r\n]/g," "),boundary=`----=_Jabari_${crypto.randomUUID().replace(/-/g,"")}`;
   const mime=[`From: Jabari <${clean(sender)}>`,`To: ${clean(lead.email)}`,`Subject: ${clean(subject)}`,"MIME-Version: 1.0",`Content-Type: text/plain; charset=\"UTF-8\"","",body,""].join("\r\n");const bytes=new TextEncoder().encode(mime);let binary="";for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));const raw=btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
-  const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",{method:"POST",headers:{Authorization:`Bearer ${token.access_token}`,"content-type":"application/json"},body:JSON.stringify({raw})});if(!response.ok)throw new Error("Gmail rejected the send request.");
+  const authHeader = `Bearer ${token.access_token}`;
+  const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",{method:"POST",headers:{Authorization:authHeader,"content-type":"application/json"},body:JSON.stringify({raw})});if(!response.ok)throw new Error("Gmail rejected the send request.");
 }
 
 export default async function handler() {
