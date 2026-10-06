@@ -61,7 +61,9 @@ async function generateGeminiText(system: string, prompt: string) {
     }
   }
 
-  throw new Error(`Gemini request failed after retry/fallback: ${lastError}`)
+  // Gemini is an enrichment aid, not a hard dependency. A temporary provider
+  // outage must not make contact discovery fail after search evidence was collected.
+  return ""
 }
 
 export const getUser = internalQuery({
@@ -730,6 +732,29 @@ export const enrichContact = action({
         "Extract only publicly displayed contact details. Never infer anything. Return exactly EMAIL:, PHONE:, CONTACT:, SOURCE:, EVIDENCE:. Leave EMAIL and PHONE blank if none is explicit.",
         JSON.stringify({ prospect: p, results }),
       )
+
+      // If Gemini is temporarily unavailable, keep the workflow alive. Only use
+      // contact values explicitly present in the returned public search text.
+      if (!rText) {
+        const evidenceText = results
+          .map((item: any) => String(item?.snippet ?? "") + " " + String(item?.title ?? ""))
+          .join(" ")
+        const emailMatch = evidenceText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i)
+        const phoneMatch = evidenceText.match(/(?:\\+?\\d[\\d().\\s-]{7,}\\d)/)
+        const email = normalizeEmail(emailMatch?.[0] || "")
+        const phone = normalizePhone(phoneMatch?.[0] || "", p.targetLocation)
+        const status = email || phone ? "needs_review" : "no_contact"
+        await ctx.runMutation(internal.research.saveContact, {
+          prospectId: args.prospectId,
+          contactEmail: email || undefined,
+          contactPhone: phone || undefined,
+          contactSource: email || phone ? "Public search evidence (Gemini temporarily unavailable)" : undefined,
+          contactEvidence: email || phone ? "Contact detail was explicitly present in public search results; manual review is required." : undefined,
+          status,
+          checkedAt: Date.now(),
+        })
+        return { status, email: email || null, phone: phone || null, aiUnavailable: true }
+      }
 
       const pick = (label: string) =>
         rText.match(new RegExp(`^\\s*${label}:\\s*(.*?)(?=\\n(?:EMAIL|PHONE|CONTACT|SOURCE|EVIDENCE):|$)`, "is"))?.[1]?.trim() || ""
