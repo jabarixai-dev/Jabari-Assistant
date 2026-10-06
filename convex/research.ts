@@ -373,8 +373,12 @@ export const leadMachine = action({
         }
         if (!row.url || candidateIsNoise(row, avoid)) continue
         if (!candidateMatchesTarget(row, niche, location)) continue
-        if (!candidateHasPublicEmail(row, emailDomains)) continue
-        candidates.push(row)
+        // The search query intentionally contains the requested public-email
+        // domains, but SerpApi/Google does not always expose the matched email
+        // in the returned snippet. Keep the relevant result for review instead
+        // of discarding the entire lead. The visible email is still captured
+        // when present and used as evidence downstream.
+        candidates.push({ ...row, publicEmailFound: candidateHasPublicEmail(row, emailDomains) })
       }
     }
 
@@ -444,13 +448,16 @@ export const leadMachine = action({
       rows.push({
         ...row,
         targetService: service,
+        publicEmailFound: Boolean((row as any).publicEmailFound),
         targetNiche: niche,
         targetLocation: location,
         targetCondition: condition,
         avoidTerms: avoid,
         qualificationStatus: qualifies ? "qualified" : "review",
         qualificationReason: qualifies
-          ? "Matched the selected search criteria."
+          ? (row as any).publicEmailFound
+            ? "Matched the selected search criteria and a requested public email domain was visible in the search evidence."
+            : "Matched the selected search criteria; the search query required a public email domain, but SerpApi did not expose the matched email in the snippet. Verify the page manually."
           : check?.status === "failed"
             ? "Website check failed, so this prospect was left for manual review instead of being treated as having no website."
             : "Requires manual review against the selected website condition.",
