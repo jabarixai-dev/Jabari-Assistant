@@ -89,6 +89,196 @@ export const fetchConversationEmails = action({
   },
 })
 
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function extractEmails(value: string): string[] {
+  return Array.from(value.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi))
+    .map(match => normalizeEmail(match[0]))
+}
+
+function gmailMessageTimestamp(value: string): number {
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : Date.now()
+}
+
+export const getGmailSyncTargets = internalQuery({
+  args: {},
+  returns: v.object({
+    prospects: v.array(v.object({ id: v.id("prospects"), email: v.string() })),
+    leads: v.array(v.object({ id: v.id("leads"), email: v.string() })),
+  }),
+  handler: async ctx => ({
+    prospects: (await ctx.db.query("prospects").withIndex("by_status_and_updatedAt").order("desc").take(500))
+      .filter(p => Boolean(p.contactEmail?.includes("@")))
+      .map(p => ({ id: p._id, email: normalizeEmail(p.contactEmail!) })),
+    leads: (await ctx.db.query("leads").withIndex("by_status_and_updatedAt").order("desc").take(500))
+      .filter(l => l.email.includes("@"))
+      .map(l => ({ id: l._id, email: normalizeEmail(l.email) })),
+  }),
+})
+
+export const syncGmailMessage = internalMutation({
+  args: {
+    direction: v.union(v.literal("sent"), v.literal("received")),
+    prospectId: v.optional(v.id("prospects")),
+    leadId: v.optional(v.id("leads")),
+    message: v.object({
+      id: v.string(),
+      threadId: v.optional(v.string()),
+      from: v.string(),
+      to: v.string(),
+      subject: v.string(),
+      preview: v.string(),
+      date: v.string(),
+    }),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("outreachEvents").withIndex("by_externalId", q => q.eq("externalId", args.message.id)).first()
+    if (existing) return null
+
+    const createdAt = gmailMessageTimestamp(args.message.date)
+    const metadata = {
+      gmailMessageId: args.message.id,
+      gmailThreadId: args.message.threadId || undefined,
+      from: args.message.from,
+      to: args.message.to,
+      subject: args.message.subject,
+      preview: args.message.preview,
+      channel: "gmail",
+      direction: args.direction,
+    }
+
+    if (args.direction === "received") {
+      if (args.prospectId) {
+        await ctx.db.insert("outreachEvents", { kind: "email_received", prospectId: args.prospectId, externalId: args.message.id, metadata, createdAt })
+        const drafts = await ctx.db.query("prospectOutreachDrafts").withIndex("by_prospectId_and_updatedAt", q => q.eq("prospectId", args.prospectId!)).order("desc").take(20)
+        for (const draft of drafts) {
+          if (draft.status === "sent" && draft.followUpScheduledAt) {
+            await ctx.db.patch(draft._id, { followUpScheduledAt: undefined, updatedAt: Date.now() })
+            await ctx.db.insert("outreachEvents", { kind: "follow_up_stopped", prospectId: args.prospectId, draftId: draft._id, metadata: { reason: "reply_received", gmailMessageId: args.message.id }, createdAt })
+          }
+        }
+      }
+      if (args.leadId) {
+        await ctx.db.insert("outreachEvents", { kind: "email_received", leadId: args.leadId, externalId: args.message.id, metadata, createdAt })
+      }
+      return null
+    }
+
+    if (args.prospectId) {
+      const drafts = await ctx.db.query("prospectOutreachDrafts").withIndex("by_prospectId_and_updatedAt", q => q.eq("prospectId", args.prospectId!)).order("desc").take(20)
+      const recipient = normalizeEmail(extractEmails(args.message.to)[0] || "")
+      const subject = normalizeEmail(args.message.subject)
+      let draft = drafts.find(d =>
+        normalizeEmail(d.recipientEmail) === recipient &&
+        normalizeEmail(d.subject) === subject &&
+        (d.status === "sent" || !d.sentAt || Math.abs((d.sentAt || createdAt) - createdAt) < 15 * 60 * 1000)
+      )
+      if (!draft) {
+        draft = drafts.find(d => normalizeEmail(d.recipientEmail) === recipient && d.status !== "cancelled")
+      }
+
+      if (draft) {
+        const followUpAt = createdAt + 72 * 60 * 60 * 1000
+        if (draft.status !== "sent") {
+          await ctx.db.patch(draft._id, {
+            status: "sent",
+            sentAt: createdAt,
+            scheduledSendAt: undefined,
+            deliveryStatus: "unknown",
+            deliveryError: undefined,
+            lastDeliveryCheckAt: undefined,
+            followUpScheduledAt: followUpAt,
+            updatedAt: Date.now(),
+          })
+        } else if (!draft.followUpScheduledAt && !draft.followUpSentAt) {
+          await ctx.db.patch(draft._id, { followUpScheduledAt: followUpAt, updatedAt: Date.now() })
+        }
+        if (followUpAt > Date.now() && !draft.followUpSentAt) {
+          await ctx.scheduler.runAt(followUpAt, internal.outreach.sendNoReplyFollowUp, { draftId: draft._id })
+        }
+        await ctx.db.insert("outreachEvents", { kind: "email_sent", prospectId: args.prospectId, draftId: draft._id, externalId: args.message.id, metadata, createdAt })
+      } else {
+        const now = Date.now()
+        const followUpAt = createdAt + 72 * 60 * 60 * 1000
+        const id = await ctx.db.insert("prospectOutreachDrafts", {
+          prospectId: args.prospectId,
+          recipientEmail: recipient || args.message.to.trim(),
+          subject: args.message.subject || "Gmail outreach",
+          bodyText: args.message.preview || "Sent from the connected Gmail account.",
+          status: "sent",
+          deliveryStatus: "unknown",
+          sentAt: createdAt,
+          followUpScheduledAt: followUpAt,
+          createdAt: now,
+          updatedAt: now,
+        })
+        await ctx.db.insert("outreachEvents", { kind: "email_sent", prospectId: args.prospectId, draftId: id, externalId: args.message.id, metadata, createdAt })
+        await ctx.db.insert("outreachEvents", { kind: "follow_up_scheduled", prospectId: args.prospectId, draftId: id, metadata: { scheduledAt: followUpAt, source: "gmail_sync" }, createdAt })
+        if (followUpAt > now) {
+          await ctx.scheduler.runAt(followUpAt, internal.outreach.sendNoReplyFollowUp, { draftId: id })
+        }
+      }
+    }
+
+    if (args.leadId) {
+      await ctx.db.insert("outreachEvents", { kind: "email_sent", leadId: args.leadId, externalId: args.message.id, metadata, createdAt })
+    }
+    return null
+  },
+})
+
+export const syncGmailOutreach = action({
+  args: {},
+  returns: v.object({ synced: v.number(), sent: v.number(), received: v.number() }),
+  handler: async ctx => {
+    const userId = await getAuthUserId(ctx)
+    if (!userId) throw new Error("Authentication required.")
+    const user = await ctx.runQuery(internal.outreach.getOwnerUser, { userId })
+    if (user?.email?.toLowerCase() !== OWNER_EMAIL) throw new Error("Owner access required.")
+    return await ctx.runAction(internal.outreach.syncGmailOutreachInternal, {})
+  },
+})
+
+export const syncGmailOutreachInternal = internalAction({
+  args: {},
+  returns: v.object({ synced: v.number(), sent: v.number(), received: v.number() }),
+  handler: async ctx => {
+    const targets = await ctx.runQuery(internal.outreach.getGmailSyncTargets, {})
+    const [sent, received] = await Promise.all([
+      searchGmailEmails("in:sent newer_than:90d", 100),
+      searchGmailEmails("in:anywhere -in:sent newer_than:90d", 100),
+    ])
+    let synced = 0
+    const match = (emails: string[], list: Array<{ id: any; email: string }>) => {
+      const emailSet = new Set(emails.map(normalizeEmail))
+      return list.find(item => emailSet.has(item.email))
+    }
+
+    for (const message of sent) {
+      const targetEmails = extractEmails(message.to)
+      const prospect = match(targetEmails, targets.prospects)
+      const lead = match(targetEmails, targets.leads)
+      if (!prospect && !lead) continue
+      await ctx.runMutation(internal.outreach.syncGmailMessage, { direction: "sent", prospectId: prospect?.id, leadId: lead?.id, message })
+      synced++
+    }
+
+    for (const message of received) {
+      const targetEmails = extractEmails(message.from)
+      const prospect = match(targetEmails, targets.prospects)
+      const lead = match(targetEmails, targets.leads)
+      if (!prospect && !lead) continue
+      await ctx.runMutation(internal.outreach.syncGmailMessage, { direction: "received", prospectId: prospect?.id, leadId: lead?.id, message })
+      synced++
+    }
+    return { synced, sent: sent.length, received: received.length }
+  },
+})
+
 export const createDraft = mutation({
   args: { leadId: v.id("leads") },
   returns: v.id("outreachDrafts"),

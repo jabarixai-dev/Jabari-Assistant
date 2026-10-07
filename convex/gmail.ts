@@ -278,6 +278,7 @@ export async function sendGmailEmail({
 
 export type GmailMessage = {
   id: string
+  threadId?: string
   from: string
   to: string
   subject: string
@@ -373,6 +374,7 @@ export async function searchGmailEmails(
 
       return {
         id,
+        threadId: String(message?.threadId ?? ""),
         from: headerValue(headers, "From"),
         to: headerValue(headers, "To"),
         subject: headerValue(headers, "Subject"),
