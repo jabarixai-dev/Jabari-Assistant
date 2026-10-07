@@ -7,12 +7,15 @@ const fmt=(v?:number)=>v?new Date(v).toLocaleString(): "—"
 export function FollowUpDashboard(){
  const {isAuthenticated}=useConvexAuth()
   const rows=useQuery(api.outreach.listFollowUpDashboard,isAuthenticated?{}:"skip") as any[]|undefined
+  const syncGmail=useAction(api.outreach.syncGmailOutreach)
+  const [syncing,setSyncing]=useState(false)
   const pause=useMutation(api.outreach.pauseFollowUp)
   const cancel=useMutation(api.outreach.cancelProspectSend)
   const deleteFollowUp=useMutation(api.outreach.deleteFollowUp)
   const trigger=useAction(api.outreach.triggerFollowUp)
   const [busy,setBusy]=useState<string|null>(null)
   const [message,setMessage]=useState("")
+  const sync=async()=>{setSyncing(true);setMessage("");try{const r=await syncGmail();setMessage(r.synced ? `Gmail synced: ${r.synced} matched message${r.synced===1?"":"s"}.` : "Gmail is up to date.")}catch(e){setMessage(e instanceof Error?e.message:"Gmail sync failed.")}finally{setSyncing(false)}}
   const act=async(id:string,fn:()=>Promise<any>,ok:string)=>{
     setBusy(id);setMessage("")
     try{await fn();setMessage(ok)}catch(e){setMessage(e instanceof Error?e.message:"Action failed.")}finally{setBusy(null)}
@@ -27,7 +30,7 @@ export function FollowUpDashboard(){
     <div className="border-b border-white/10 p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><h2 className="text-lg font-semibold">Follow-up management</h2><p className="mt-1 text-xs text-white/40">Track scheduled follow-ups, stop automation, or trigger an eligible follow-up manually.</p></div>
-        <span className="rounded-full border border-[#d4af37]/25 px-3 py-1 text-[10px] uppercase tracking-wider text-[#d4af37]">Automation control</span>
+        <div className="flex flex-wrap gap-2"><button disabled={syncing} onClick={()=>void sync()} className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/10 px-3 py-2 text-xs font-semibold text-[#d4af37] disabled:opacity-50">{syncing?"Syncing Gmail…":"Sync Gmail"}</button><span className="rounded-full border border-[#d4af37]/25 px-3 py-1 text-[10px] uppercase tracking-wider text-[#d4af37]">Automation control</span></div>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[["queued","Queued"],["scheduled","Follow-ups scheduled"],["sent","Follow-ups sent"],["bounced","Bounced"]].map(([k,l])=><div key={k} className="rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[10px] uppercase tracking-wider text-white/35">{l}</p><p className="mt-1 text-xl font-semibold">{counts[k as keyof typeof counts]}</p></div>)}
